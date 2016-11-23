@@ -1,4 +1,5 @@
 #include <stdlib.h>
+#include <unistd.h>
 #include <string.h>
 #include <time.h>
 #include <errno.h>
@@ -9,8 +10,10 @@
 #include <ncurses.h>
 
 #define YEAR_RANGE 1
-#define CAL_WIDTH 21
-#define ASIDE_WIDTH 4
+#define CAL_MONTH_WIDTH 4
+#define CAL_DAY_WIDTH 21
+#define CAL_TO_TEXT_WIDTH 3
+#define CAL_WIDTH (CAL_MONTH_WIDTH + CAL_DAY_WIDTH + CAL_TO_TEXT_WIDTH)
 #define MAX_MONTH_HEIGHT 6
 
 int cy, cx;
@@ -23,6 +26,12 @@ struct tm cal_end;
 
 static const char* WEEKDAYS[] = {"Mo","Tu","We","Th","Fr","Sa","Su", NULL};
 
+bool date_has_entry(char* dir, struct tm* date);
+
+void get_date_str(struct tm* date, char* date_str, int date_str_size) {
+    strftime(date_str, date_str_size, "%Y-%m-%d", date);
+}
+
 void draw_wdays(WINDOW* head) {
     char** wd;
     for (wd = (char**)WEEKDAYS; *wd; wd++) {
@@ -32,19 +41,45 @@ void draw_wdays(WINDOW* head) {
     wrefresh(head);
 }
 
-void draw_calendar(WINDOW* number_pad, WINDOW* month_pad) {
+void draw_calendar(WINDOW* number_pad, WINDOW* month_pad, char* diary_dir) {
     struct tm i = cal_start;
     char month[10];
 
     while (mktime(&i) <= mktime(&cal_end)) {
+        //
+        // Day
+        //
         getyx(number_pad, cy, cx);
+        // Determine if the date need extra attributes
+        bool is_today = ((cur_date.tm_year == i.tm_year) && (cur_date.tm_yday == i.tm_yday));
+        bool has_entry = date_has_entry(diary_dir, &i);
+        // Apply the attributes
+        if (is_today) { wattron(number_pad, A_UNDERLINE); }
+        if (has_entry) { wattron(number_pad, A_BOLD); }
+        // Write the date
         mvwprintw(number_pad, cy, cx, "%2i", i.tm_mday);
+        // Remove the added atributes
+        if (is_today) { wattroff(number_pad, A_UNDERLINE); }
+        if (has_entry) { wattroff(number_pad, A_BOLD); }
+        // Add pading
         waddch(number_pad, ' ');
 
+        //
+        // Month
+        //
         if (i.tm_mday == 1) {
+            // Get the month string
             strftime(month, sizeof month, "%b", &i);
             getyx(number_pad, cy, cx);
-            mvwprintw(month_pad, cy, 0, "%s ", month);
+
+            // Determine if the date need extra attributes
+            bool is_month = ((cur_date.tm_year == i.tm_year) && (cur_date.tm_mon == i.tm_mon));
+            // Apply the attributes
+            if (is_month) { wattron(month_pad, A_UNDERLINE); }
+            // Write the month
+            mvwprintw(month_pad, cy, 0, "%s", month);
+            // Remove the added atributes
+            if (is_month) { wattroff(month_pad, A_UNDERLINE); }
         }
 
         i.tm_mday++;
@@ -54,23 +89,26 @@ void draw_calendar(WINDOW* number_pad, WINDOW* month_pad) {
 
 void update_date(WINDOW* dh) {
     mktime(&curs_date);
-    strftime(curs_date_str, sizeof curs_date_str, "%Y-%m-%d", &curs_date);
+    get_date_str(&curs_date, curs_date_str, sizeof(curs_date_str));
     mvwaddstr(dh, 0, 0, curs_date_str);
     wrefresh(dh);
 }
 
-char* curs_date_file_path(char* dir) {
+char* curs_date_file_path(char* dir, struct tm* date) {
     static char path[100];
 
     strcpy(path, dir);
     if (dir[strlen(dir) - 1] != '/')
         strcat(path, "/");
-    strcat(path, curs_date_str);
+
+    char date_str[16];
+    get_date_str(date, date_str, sizeof(date_str));
+    strcat(path, date_str);
 
     return path;
 }
 
-char* curs_date_edit_cmd(char* dir) {
+char* curs_date_edit_cmd(char* dir, struct tm* date) {
     static char edit_cmd[150];
     char* editor = getenv("EDITOR");
     if (editor == NULL)
@@ -78,9 +116,15 @@ char* curs_date_edit_cmd(char* dir) {
 
     strcpy(edit_cmd, editor);
     strcat(edit_cmd, " ");
-    strcat(edit_cmd, curs_date_file_path(dir));
+    strcat(edit_cmd, curs_date_file_path(dir, date));
 
     return edit_cmd;
+}
+
+bool date_has_entry(char* dir, struct tm* date) {
+    char* entry_path = curs_date_file_path(dir, date);
+    bool file_exists = access( entry_path, F_OK ) != -1;
+    return file_exists;
 }
 
 bool is_leap(int year) {
@@ -90,14 +134,14 @@ bool is_leap(int year) {
     return (year % 400 == 0) || (year % 4 == 0 && year % 100 != 0);
 }
 
-void read_diary(char* dir) {
-    int width = COLS - ASIDE_WIDTH - CAL_WIDTH;
-    WINDOW* prev = newwin(LINES - 1, width, 1, ASIDE_WIDTH + CAL_WIDTH);
+void read_diary(char* dir, struct tm* date) {
+    int width = COLS - CAL_WIDTH;
+    WINDOW* prev = newwin(LINES - 1, width, 1, CAL_WIDTH);
 
     wclear(prev);
     char buff[width];
     int i = 0;
-    char* path = curs_date_file_path(dir);
+    char* path = curs_date_file_path(dir, date);
 
     FILE* fp =  fopen(path, "r");
     if (fp != NULL) {
@@ -122,15 +166,23 @@ bool go_to(WINDOW* calendar, WINDOW* month_sidebar, time_t date, int* cur_pad_po
     localtime_r(&date, &curs_date);
 
     getyx(calendar, cy, cx);
-    mvwchgat(calendar, cy        , 0             , -1, A_NORMAL,   0, NULL);
-    mvwchgat(calendar, diff_weeks, diff_wdays * 3,  2, A_STANDOUT, 0, NULL);
+
+    // Remove the STANDOUT attribute from the day we are leaving
+    chtype current_attrs =  mvwinch(calendar, cy, cx) & A_ATTRIBUTES;
+    current_attrs &= ~A_STANDOUT;
+    mvwchgat(calendar, cy        , cx            ,  2, current_attrs,   0, NULL);
+
+    // Add the STANDOUT attribute to the day we are entering
+    chtype new_attrs =  mvwinch(calendar, diff_weeks, diff_wdays * 3) & A_ATTRIBUTES;
+    new_attrs |= A_STANDOUT;
+    mvwchgat(calendar, diff_weeks, diff_wdays * 3,  2, new_attrs, 0, NULL);
 
     if (diff_weeks < *cur_pad_pos)
         *cur_pad_pos = diff_weeks;
     if (diff_weeks > *cur_pad_pos + LINES - 2)
         *cur_pad_pos = diff_weeks - LINES + 2;
-    prefresh(month_sidebar, *cur_pad_pos, 0, 1,           0, LINES - 1, ASIDE_WIDTH);
-    prefresh(calendar,      *cur_pad_pos, 0, 1, ASIDE_WIDTH, LINES - 1, ASIDE_WIDTH + CAL_WIDTH);
+    prefresh(month_sidebar, *cur_pad_pos, 0, 1,               0, LINES - 1, CAL_MONTH_WIDTH);
+    prefresh(calendar,      *cur_pad_pos, 0, 1, CAL_MONTH_WIDTH, LINES - 1, CAL_MONTH_WIDTH + CAL_DAY_WIDTH);
 
     return true;
 }
@@ -181,7 +233,7 @@ int main(int argc, char** argv) {
     if (diary_dir_ptr) {
         // Directory exists, continue
         closedir(diary_dir_ptr);
-    } else if (errno = ENOENT) {
+    } else if (errno == ENOENT) {
         fprintf(stderr, "The directory '%s' does not exist\n", diary_dir);
         return 2;
     } else {
@@ -195,32 +247,32 @@ int main(int argc, char** argv) {
     raw();
     curs_set(0);
 
-    WINDOW* date_header = newwin(1, 10, 0, ASIDE_WIDTH + CAL_WIDTH);
+    WINDOW* date_header = newwin(1, 10, 0, CAL_WIDTH-2);
     wattron(date_header, A_BOLD);
     update_date(date_header);
-    WINDOW* wdays_header = newwin(1, 3 * 7, 0, ASIDE_WIDTH);
+    WINDOW* wdays_header = newwin(1, 3 * 7, 0, CAL_MONTH_WIDTH);
     draw_wdays(wdays_header);
 
-    WINDOW* aside = newpad((YEAR_RANGE * 2 + 1) * 12 * MAX_MONTH_HEIGHT, ASIDE_WIDTH);
-    WINDOW* cal = newpad((YEAR_RANGE * 2 + 1) * 12 * MAX_MONTH_HEIGHT, CAL_WIDTH);
+    WINDOW* aside = newpad((YEAR_RANGE * 2 + 1) * 12 * MAX_MONTH_HEIGHT, CAL_MONTH_WIDTH);
+    WINDOW* cal = newpad((YEAR_RANGE * 2 + 1) * 12 * MAX_MONTH_HEIGHT, CAL_DAY_WIDTH);
     keypad(cal, TRUE);
-    draw_calendar(cal, aside);
+    draw_calendar(cal, aside, diary_dir);
 
     int ch;
     struct tm new_date;
-    // init the current pad possition at the very end,
-    // such that the cursor is displayed top of screen
-    int pad_pos = 9999999;
+    // init the current pad possition at the very begining,
+    // such that the cursor is displayed bottom of screen
+    int pad_pos = 0;
 
     wmove(cal, 0, 0);
     getyx(cal, cy, cx);
     bool ret = go_to(cal, aside, raw_time, &pad_pos);
-    read_diary(diary_dir);
+    read_diary(diary_dir, &cur_date);
 
     do {
         ch = wgetch(cal);
         new_date = curs_date;
-        char* ecmd = curs_date_edit_cmd(diary_dir);
+        char* ecmd = curs_date_edit_cmd(diary_dir, &new_date);
 
         switch(ch) {
             // Basic movements
@@ -285,7 +337,7 @@ int main(int argc, char** argv) {
 
         if (ret) {
             update_date(date_header);
-            read_diary(diary_dir);
+            read_diary(diary_dir, &new_date);
         }
     } while (ch != 'q');
 
