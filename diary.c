@@ -128,10 +128,11 @@ void display_entry(char* dir, size_t dir_size, struct tm* date, WINDOW* win, int
 {
     char buff[width];
     char path[100];
+    char* ppath = path;
     int i = 0;
 
     // get entry path
-    fpath(dir, dir_size, date, path, sizeof path);
+    fpath(dir, dir_size, date, &ppath, sizeof path);
     if (path == NULL) {
         fprintf(stderr, "Error while retrieving file path for diary reading");
         return;
@@ -172,7 +173,8 @@ void edit_cmd(char* dir, size_t dir_size, struct tm* date, char* rcmd, size_t rc
 
     // get path of entry
     char path[100];
-    fpath(dir, dir_size, date, path, sizeof path);
+    char* ppath = path;
+    fpath(dir, dir_size, date, &ppath, sizeof path);
 
     if (path == NULL) {
         fprintf(stderr, "Error while retrieving file path for editing");
@@ -191,9 +193,10 @@ void edit_cmd(char* dir, size_t dir_size, struct tm* date, char* rcmd, size_t rc
 bool date_has_entry(char* dir, size_t dir_size, struct tm* i)
 {
     char epath[100];
+    char* pepath = epath;
 
     // get entry path and check for existence
-    fpath(dir, dir_size, i, epath, sizeof epath);
+    fpath(dir, dir_size, i, &pepath, sizeof epath);
 
     if (epath == NULL) {
         fprintf(stderr, "Error while retrieving file path for checking entry existence");
@@ -216,39 +219,39 @@ void get_date_str(struct tm* date, char* date_str, size_t date_str_size)
     strftime(date_str, date_str_size, "%Y-%m-%d", date);
 }
 
-void fpath(char* dir, size_t dir_size, struct tm* date, char* rpath, size_t rpath_size)
+void fpath(char* dir, size_t dir_size, struct tm* date, char** rpath, size_t rpath_size)
 {
     // check size of result path
     if (dir_size + 1 > rpath_size) {
         fprintf(stderr, "Directory path too long");
-        rpath == NULL;
+        *rpath = NULL;
         return;
     }
 
     // add path of the diary dir to result path
-    strcpy(rpath, dir);
+    strcpy(*rpath, dir);
 
     // check for terminating '/' in path
     if (dir[dir_size - 1] != '/') {
         // check size again to accomodate '/'
         if (dir_size + 1 > rpath_size) {
             fprintf(stderr, "Directory path too long");
-            rpath == NULL;
+            *rpath = NULL;
             return;
         }
-        strcat(rpath, "/");
+        strcat(*rpath, "/");
     }
 
     char dstr[16];
     get_date_str(date, dstr, sizeof dstr);
 
     // append date to the result path
-    if (strlen(rpath) + strlen(dstr) > rpath_size) {
+    if (strlen(*rpath) + strlen(dstr) > rpath_size) {
         fprintf(stderr, "File path too long");
-        rpath == NULL;
+        *rpath = NULL;
         return;
     }
-    strcat(rpath, dstr);
+    strcat(*rpath, dstr);
 }
 
 int main(int argc, char** argv) {
@@ -334,6 +337,7 @@ int main(int argc, char** argv) {
         new_date = curs_date;
         char ecmd[150];
         char pth[100];
+	char* ppth = pth;
         char dstr[16];
         edit_cmd(diary_dir, strlen(diary_dir), &new_date, ecmd, sizeof ecmd);
 
@@ -407,7 +411,11 @@ int main(int argc, char** argv) {
             case 'x':
                 if (date_has_entry(diary_dir, strlen(diary_dir), &curs_date)) {
                     // get file path of entry and delete entry
-                    fpath(diary_dir, strlen(diary_dir), &curs_date, pth, sizeof pth);
+                    fpath(diary_dir, strlen(diary_dir), &curs_date, &ppth, sizeof pth);
+                    if (pth == NULL) {
+                        fprintf(stderr, "Error retrieving file path for entry removal");
+                        break;
+                    }
 
                     // prepare header for confirmation dialogue
                     wclear(header);

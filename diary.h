@@ -28,6 +28,6 @@ void edit_cmd(char* dir, size_t dir_size, struct tm* date, char* rcmd, size_t rc
 bool date_has_entry(char* dir, size_t dir_size, struct tm* i);
 bool is_leap(int year);
 void get_date_str(struct tm* date, char* date_str, size_t date_str_size);
-void fpath(char* dir, size_t dir_size, struct tm* date, char* rpath, size_t rpath_size);
+void fpath(char* dir, size_t dir_size, struct tm* date, char** rpath, size_t rpath_size);
 
 #endif
