@@ -1,37 +1,39 @@
 #include "diary.h"
 
-int cy, cx;
-time_t raw_time;
-struct tm today;
-struct tm curs_date;
-struct tm cal_start;
-struct tm cal_end;
+struct app_state {
+    int cy, cx;
+    time_t raw_time;
+    struct tm today;
+    struct tm curs_date;
+    struct tm cal_start;
+    struct tm cal_end;
+};
 
-void setup_cal_timeframe()
+void setup_cal_timeframe(struct app_state* s)
 {
-    raw_time = time(NULL);
-    localtime_r(&raw_time, &today);
-    curs_date = today;
+    s->raw_time = time(NULL);
+    localtime_r(&s->raw_time, &s->today);
+    s->curs_date = s->today;
 
-    cal_start = today;
-    cal_start.tm_year -= YEAR_RANGE;
-    cal_start.tm_mon = 0;
-    cal_start.tm_mday = 1;
-    mktime(&cal_start);
+    s->cal_start = s->today;
+    s->cal_start.tm_year -= YEAR_RANGE;
+    s->cal_start.tm_mon = 0;
+    s->cal_start.tm_mday = 1;
+    mktime(&s->cal_start);
 
-    if (cal_start.tm_wday != 1) {
+    if (s->cal_start.tm_wday != 1) {
         // adjust start date to first Mon before 01.01
-        cal_start.tm_year--;
-        cal_start.tm_mon = 11;
-        cal_start.tm_mday = 31 - cal_start.tm_wday + 2;
-        mktime(&cal_start);
+        s->cal_start.tm_year--;
+        s->cal_start.tm_mon = 11;
+        s->cal_start.tm_mday = 31 - s->cal_start.tm_wday + 2;
+        mktime(&s->cal_start);
     }
 
-    cal_end = today;
-    cal_end.tm_year += YEAR_RANGE;
-    cal_end.tm_mon = 11;
-    cal_end.tm_mday = 31;
-    mktime(&cal_end);
+    s->cal_end = s->today;
+    s->cal_end.tm_year += YEAR_RANGE;
+    s->cal_end.tm_mon = 11;
+    s->cal_end.tm_mday = 31;
+    mktime(&s->cal_end);
 }
 
 void draw_wdays(WINDOW* head)
@@ -44,14 +46,18 @@ void draw_wdays(WINDOW* head)
     wrefresh(head);
 }
 
-void draw_calendar(WINDOW* number_pad, WINDOW* month_pad, char* diary_dir, size_t diary_dir_size)
+void draw_calendar(struct app_state* s,
+                   WINDOW* number_pad,
+                   WINDOW* month_pad,
+                   char* diary_dir,
+                   size_t diary_dir_size)
 {
-    struct tm i = cal_start;
+    struct tm i = s->curs_date;
     char month[10];
     char epath[100];
     bool has_entry;
 
-    while (mktime(&i) <= mktime(&cal_end)) {
+    while (mktime(&i) <= mktime(&s->cal_end)) {
         has_entry = date_has_entry(diary_dir, diary_dir_size, &i);
 
         if (has_entry)
@@ -67,8 +73,8 @@ void draw_calendar(WINDOW* number_pad, WINDOW* month_pad, char* diary_dir, size_
         // print month in sidebar
         if (i.tm_mday == 1) {
             strftime(month, sizeof month, "%b", &i);
-            getyx(number_pad, cy, cx);
-            mvwprintw(month_pad, cy, 0, "%s ", month);
+            getyx(number_pad, s->cy, s->cx);
+            mvwprintw(month_pad, s->cy, 0, "%s ", month);
         }
 
         i.tm_mday++;
@@ -77,36 +83,40 @@ void draw_calendar(WINDOW* number_pad, WINDOW* month_pad, char* diary_dir, size_
 }
 
 /* Update the header with the cursor date */
-void update_date(WINDOW* header)
+void update_date(struct app_state* s, WINDOW* header)
 {
     char dstr[16];
-    mktime(&curs_date);
-    get_date_str(&curs_date, dstr, sizeof dstr);
+    mktime(&s->curs_date);
+    get_date_str(&s->curs_date, dstr, sizeof dstr);
 
     wclear(header);
     mvwaddstr(header, 0, 0, dstr);
     wrefresh(header);
 }
 
-bool go_to(WINDOW* calendar, WINDOW* aside, time_t date, int* cur_pad_pos)
+bool go_to(struct app_state* s,
+           WINDOW* calendar,
+           WINDOW* aside,
+           time_t date,
+           int* cur_pad_pos)
 {
-    if (date < mktime(&cal_start) || date > mktime(&cal_end))
+    if (date < mktime(&s->cal_start) || date > mktime(&s->cal_end))
         return false;
 
-    int diff_seconds = date - mktime(&cal_start);
+    int diff_seconds = date - mktime(&s->cal_start);
     int diff_days = diff_seconds / 60 / 60 / 24;
     int diff_weeks = diff_days / 7;
     int diff_wdays = diff_days % 7;
 
-    localtime_r(&date, &curs_date);
+    localtime_r(&date, &s->curs_date);
 
-    getyx(calendar, cy, cx);
+    getyx(calendar, s->cy, s->cx);
 
     // remove the STANDOUT attribute from the day we are leaving
-    chtype current_attrs = mvwinch(calendar, cy, cx) & A_ATTRIBUTES;
+    chtype current_attrs = mvwinch(calendar, s->cy, s->cx) & A_ATTRIBUTES;
     // leave every attr as is, but turn off STANDOUT
     current_attrs &= ~A_STANDOUT;
-    mvwchgat(calendar, cy, cx, 2, current_attrs, 0, NULL);
+    mvwchgat(calendar, s->cy, s->cx, 2, current_attrs, 0, NULL);
 
     // add the STANDOUT attribute to the day we are entering
     chtype new_attrs =  mvwinch(calendar, diff_weeks, diff_wdays * 3) & A_ATTRIBUTES;
@@ -255,6 +265,7 @@ void fpath(char* dir, size_t dir_size, struct tm* date, char** rpath, size_t rpa
 }
 
 int main(int argc, char** argv) {
+    struct app_state* state = calloc(1, sizeof(*state));
     char diary_dir[80];
     char* env_var;
     chtype atrs;
@@ -297,7 +308,7 @@ int main(int argc, char** argv) {
         return 1;
     }
 
-    setup_cal_timeframe();
+    setup_cal_timeframe(state);
 
     initscr();
     raw();
@@ -305,14 +316,14 @@ int main(int argc, char** argv) {
 
     WINDOW* header = newwin(1, COLS - CAL_WIDTH - ASIDE_WIDTH, 0, ASIDE_WIDTH + CAL_WIDTH);
     wattron(header, A_BOLD);
-    update_date(header);
+    update_date(state, header);
     WINDOW* wdays = newwin(1, 3 * 7, 0, ASIDE_WIDTH);
     draw_wdays(wdays);
 
     WINDOW* aside = newpad((YEAR_RANGE * 2 + 1) * 12 * MAX_MONTH_HEIGHT, ASIDE_WIDTH);
     WINDOW* cal = newpad((YEAR_RANGE * 2 + 1) * 12 * MAX_MONTH_HEIGHT, CAL_WIDTH);
     keypad(cal, TRUE);
-    draw_calendar(cal, aside, diary_dir, strlen(diary_dir));
+    draw_calendar(state, cal, aside, diary_dir, strlen(diary_dir));
 
     int ch, conf_ch;
     int pad_pos = 0;
@@ -321,20 +332,20 @@ int main(int argc, char** argv) {
     int prev_width = COLS - ASIDE_WIDTH - CAL_WIDTH;
     int prev_height = LINES - 1;
 
-    bool mv_valid = go_to(cal, aside, raw_time, &pad_pos);
+    bool mv_valid = go_to(state, cal, aside, state->raw_time, &pad_pos);
     // mark current day
     atrs = winch(cal) & A_ATTRIBUTES;
     wchgat(cal, 2, atrs | A_UNDERLINE, 0, NULL);
     prefresh(cal, pad_pos, 0, 1, ASIDE_WIDTH, LINES - 1, ASIDE_WIDTH + CAL_WIDTH);
 
     WINDOW* prev = newwin(prev_height, prev_width, 1, ASIDE_WIDTH + CAL_WIDTH);
-    display_entry(diary_dir, strlen(diary_dir), &today, prev, prev_width);
+    display_entry(diary_dir, strlen(diary_dir), &state->today, prev, prev_width);
 
     do {
         ch = wgetch(cal);
         // new_date represents the desired date the user wants to go_to(),
         // which may not be a feasible date at all
-        new_date = curs_date;
+        new_date = state->curs_date;
         char ecmd[150];
         char pth[100];
 	char* ppth = pth;
@@ -346,30 +357,30 @@ int main(int argc, char** argv) {
             case 'j':
             case KEY_DOWN:
                 new_date.tm_mday += 7;
-                mv_valid = go_to(cal, aside, mktime(&new_date), &pad_pos);
+                mv_valid = go_to(state, cal, aside, mktime(&new_date), &pad_pos);
                 break;
             case 'k':
             case KEY_UP:
                 new_date.tm_mday -= 7;
-                mv_valid = go_to(cal, aside, mktime(&new_date), &pad_pos);
+                mv_valid = go_to(state, cal, aside, mktime(&new_date), &pad_pos);
                 break;
             case 'l':
             case KEY_RIGHT:
                 new_date.tm_mday++;
-                mv_valid = go_to(cal, aside, mktime(&new_date), &pad_pos);
+                mv_valid = go_to(state, cal, aside, mktime(&new_date), &pad_pos);
                 break;
             case 'h':
             case KEY_LEFT:
                 new_date.tm_mday--;
-                mv_valid = go_to(cal, aside, mktime(&new_date), &pad_pos);
+                mv_valid = go_to(state, cal, aside, mktime(&new_date), &pad_pos);
                 break;
 
             // jump to top/bottom of page
             case 'g':
-                mv_valid = go_to(cal, aside, mktime(&cal_start), &pad_pos);
+                mv_valid = go_to(state, cal, aside, mktime(&state->cal_start), &pad_pos);
                 break;
             case 'G':
-                mv_valid = go_to(cal, aside, mktime(&cal_end), &pad_pos);
+                mv_valid = go_to(state, cal, aside, mktime(&state->cal_end), &pad_pos);
                 break;
 
             // jump backward/forward by a month
@@ -377,12 +388,12 @@ int main(int argc, char** argv) {
                 if (new_date.tm_mday == 1)
                     new_date.tm_mon--;
                 new_date.tm_mday = 1;
-                mv_valid = go_to(cal, aside, mktime(&new_date), &pad_pos);
+                mv_valid = go_to(state, cal, aside, mktime(&new_date), &pad_pos);
                 break;
             case 'J':
                 new_date.tm_mon++;
                 new_date.tm_mday = 1;
-                mv_valid = go_to(cal, aside, mktime(&new_date), &pad_pos);
+                mv_valid = go_to(state, cal, aside, mktime(&new_date), &pad_pos);
                 break;
 
             // search for specific date
@@ -396,22 +407,22 @@ int main(int argc, char** argv) {
                     // struct tm.tm_mon in range [0, 11]
                     new_date.tm_mon = smonth - 1;
                     new_date.tm_mday = sday;
-                    mv_valid = go_to(cal, aside, mktime(&new_date), &pad_pos);
+                    mv_valid = go_to(state, cal, aside, mktime(&new_date), &pad_pos);
                 }
                 curs_set(0);
                 //update_date(header);
                 break;
             // today shortcut
             case 't':
-                new_date = today;
-                mv_valid = go_to(cal, aside, raw_time, &pad_pos);
+                new_date = state->today;
+                mv_valid = go_to(state, cal, aside, state->raw_time, &pad_pos);
                 break;
             // delete entry
             case 'd':
             case 'x':
-                if (date_has_entry(diary_dir, strlen(diary_dir), &curs_date)) {
+                if (date_has_entry(diary_dir, strlen(diary_dir), &state->curs_date)) {
                     // get file path of entry and delete entry
-                    fpath(diary_dir, strlen(diary_dir), &curs_date, &ppth, sizeof pth);
+                    fpath(diary_dir, strlen(diary_dir), &state->curs_date, &ppth, sizeof pth);
                     if (pth == NULL) {
                         fprintf(stderr, "Error retrieving file path for entry removal");
                         break;
@@ -423,7 +434,7 @@ int main(int argc, char** argv) {
                     noecho();
 
                     // ask for confirmation
-                    get_date_str(&curs_date, dstr, sizeof dstr);
+                    get_date_str(&state->curs_date, dstr, sizeof dstr);
                     mvwprintw(header, 0, 0, "Delete entry '%s'? [Y/n] ", dstr);
                     bool conf = false;
                     while (!conf) {
@@ -437,7 +448,7 @@ int main(int argc, char** argv) {
                                          LINES - 1, ASIDE_WIDTH + CAL_WIDTH);
                             }
                         } else if (conf_ch == 27 || conf_ch == 'n') {
-                            update_date(header);
+                            update_date(state, header);
                         }
                         break;
                     }
@@ -456,7 +467,7 @@ int main(int argc, char** argv) {
                     keypad(cal, TRUE);
 
                     // mark newly created entry
-                    if (date_has_entry(diary_dir, strlen(diary_dir), &curs_date)) {
+                    if (date_has_entry(diary_dir, strlen(diary_dir), &state->curs_date)) {
                         atrs = winch(cal) & A_ATTRIBUTES;
                         wchgat(cal, 2, atrs | A_BOLD, 0, NULL);
 
@@ -469,18 +480,19 @@ int main(int argc, char** argv) {
         }
 
         if (mv_valid) {
-            update_date(header);
+            update_date(state, header);
 
             // adjust prev width (if terminal was resized in the mean time)
             prev_width = COLS - ASIDE_WIDTH - CAL_WIDTH;
             wresize(prev, prev_height, prev_width);
 
             // read the diary
-            display_entry(diary_dir, strlen(diary_dir), &curs_date, prev, prev_width);
+            display_entry(diary_dir, strlen(diary_dir), &state->curs_date, prev, prev_width);
         }
     } while (ch != 'q');
 
     endwin();
+    free(state);
     system("clear");
     return 0;
 }
