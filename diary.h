@@ -23,7 +23,7 @@ void update_date(WINDOW* header);
 
 bool go_to(WINDOW* calendar, WINDOW* aside, time_t date, int* cur_pad_pos);
 void display_entry(char* dir, size_t dir_size, struct tm* date, WINDOW* win, int width);
-void edit_cmd(char* dir, size_t dir_size, struct tm* date, char* rcmd, size_t rcmd_size);
+void edit_cmd(char* dir, size_t dir_size, struct tm* date, char** rcmd, size_t rcmd_size);
 
 bool date_has_entry(char* dir, size_t dir_size, struct tm* i);
 bool is_leap(int year);

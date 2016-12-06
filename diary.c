@@ -48,7 +48,6 @@ void draw_calendar(WINDOW* number_pad, WINDOW* month_pad, char* diary_dir, size_
 {
     struct tm i = cal_start;
     char month[10];
-    char epath[100];
     bool has_entry;
 
     while (mktime(&i) <= mktime(&cal_end)) {
@@ -133,7 +132,7 @@ void display_entry(char* dir, size_t dir_size, struct tm* date, WINDOW* win, int
 
     // get entry path
     fpath(dir, dir_size, date, &ppath, sizeof path);
-    if (path == NULL) {
+    if (ppath == NULL) {
         fprintf(stderr, "Error while retrieving file path for diary reading");
         return;
     }
@@ -152,42 +151,43 @@ void display_entry(char* dir, size_t dir_size, struct tm* date, WINDOW* win, int
     wrefresh(win);
 }
 
-void edit_cmd(char* dir, size_t dir_size, struct tm* date, char* rcmd, size_t rcmd_size)
+/* Writes edit command for 'date' entry to 'rcmd'. '*rcmd' is NULL on error. */
+void edit_cmd(char* dir, size_t dir_size, struct tm* date, char** rcmd, size_t rcmd_size)
 {
     // get editor from environment
     char* editor = getenv("EDITOR");
     if (editor == NULL) {
         fprintf(stderr, "'EDITOR' environment variable not set");
-        rcmd = NULL;
+        *rcmd = NULL;
         return;
     }
 
     // set the edit command to env editor
     if (strlen(editor) + 2 > rcmd_size) {
         fprintf(stderr, "Binary path of default editor too long");
-        rcmd = NULL;
+        *rcmd = NULL;
         return;
     }
-    strcpy(rcmd, editor);
-    strcat(rcmd, " ");
+    strcpy(*rcmd, editor);
+    strcat(*rcmd, " ");
 
     // get path of entry
     char path[100];
     char* ppath = path;
     fpath(dir, dir_size, date, &ppath, sizeof path);
 
-    if (path == NULL) {
+    if (ppath == NULL) {
         fprintf(stderr, "Error while retrieving file path for editing");
-        rcmd = NULL;
+        *rcmd = NULL;
         return;
     }
 
     // concatenate editor command with entry path
-    if (strlen(rcmd) + strlen(path) + 1 > rcmd_size) {
+    if (strlen(*rcmd) + strlen(path) + 1 > rcmd_size) {
         fprintf(stderr, "Edit command too long");
         return;
     }
-    strcat(rcmd, path);
+    strcat(*rcmd, path);
 }
 
 bool date_has_entry(char* dir, size_t dir_size, struct tm* i)
@@ -198,7 +198,7 @@ bool date_has_entry(char* dir, size_t dir_size, struct tm* i)
     // get entry path and check for existence
     fpath(dir, dir_size, i, &pepath, sizeof epath);
 
-    if (epath == NULL) {
+    if (pepath == NULL) {
         fprintf(stderr, "Error while retrieving file path for checking entry existence");
         return false;
     }
@@ -219,6 +219,7 @@ void get_date_str(struct tm* date, char* date_str, size_t date_str_size)
     strftime(date_str, date_str_size, "%Y-%m-%d", date);
 }
 
+/* Writes file path for 'date' entry to 'rpath'. '*rpath' is NULL on error. */
 void fpath(char* dir, size_t dir_size, struct tm* date, char** rpath, size_t rpath_size)
 {
     // check size of result path
@@ -336,10 +337,11 @@ int main(int argc, char** argv) {
         // which may not be a feasible date at all
         new_date = curs_date;
         char ecmd[150];
+        char* pecmd = ecmd;
         char pth[100];
-	char* ppth = pth;
+        char* ppth = pth;
         char dstr[16];
-        edit_cmd(diary_dir, strlen(diary_dir), &new_date, ecmd, sizeof ecmd);
+        edit_cmd(diary_dir, strlen(diary_dir), &new_date, &pecmd, sizeof ecmd);
 
         switch(ch) {
             // basic movements
@@ -412,7 +414,7 @@ int main(int argc, char** argv) {
                 if (date_has_entry(diary_dir, strlen(diary_dir), &curs_date)) {
                     // get file path of entry and delete entry
                     fpath(diary_dir, strlen(diary_dir), &curs_date, &ppth, sizeof pth);
-                    if (pth == NULL) {
+                    if (ppth == NULL) {
                         fprintf(stderr, "Error retrieving file path for entry removal");
                         break;
                     }
@@ -449,21 +451,23 @@ int main(int argc, char** argv) {
             // edit/create a diary entry
             case 'e':
             case '\n':
-                if (ecmd) {
-                    curs_set(1);
-                    system(ecmd);
-                    curs_set(0);
-                    keypad(cal, TRUE);
+                if (pecmd == NULL) {
+                    fprintf(stderr, "Error retrieving edit command");
+                    break;
+                }
+                curs_set(1);
+                system(ecmd);
+                curs_set(0);
+                keypad(cal, TRUE);
 
-                    // mark newly created entry
-                    if (date_has_entry(diary_dir, strlen(diary_dir), &curs_date)) {
-                        atrs = winch(cal) & A_ATTRIBUTES;
-                        wchgat(cal, 2, atrs | A_BOLD, 0, NULL);
+                // mark newly created entry
+                if (date_has_entry(diary_dir, strlen(diary_dir), &curs_date)) {
+                    atrs = winch(cal) & A_ATTRIBUTES;
+                    wchgat(cal, 2, atrs | A_BOLD, 0, NULL);
 
-                        // refresh the calendar to add highlighting
-                        prefresh(cal, pad_pos, 0, 1, ASIDE_WIDTH,
-                                 LINES - 1, ASIDE_WIDTH + CAL_WIDTH);
-                    }
+                    // refresh the calendar to add highlighting
+                    prefresh(cal, pad_pos, 0, 1, ASIDE_WIDTH,
+                             LINES - 1, ASIDE_WIDTH + CAL_WIDTH);
                 }
                 break;
         }
