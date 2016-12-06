@@ -4,7 +4,7 @@ PREFIX ?= /usr/local
 BINDIR ?= $(DESTDIR)$(PREFIX)/bin
 
 CC = gcc
-CFLAGS = -lncurses
+CFLAGS = -lncurses -Wall
 
 default: $(TARGET)
 
