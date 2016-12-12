@@ -125,10 +125,9 @@ bool go_to(WINDOW* calendar, WINDOW* aside, time_t date, int* cur_pad_pos)
 /* Update window 'win' with diary entry from date 'date' */
 void display_entry(char* dir, size_t dir_size, struct tm* date, WINDOW* win, int width)
 {
-    char buff[width];
     char path[100];
     char* ppath = path;
-    int i = 0;
+    int c;
 
     // get entry path
     fpath(dir, dir_size, date, &ppath, sizeof path);
@@ -139,12 +138,13 @@ void display_entry(char* dir, size_t dir_size, struct tm* date, WINDOW* win, int
 
     wclear(win);
 
-    FILE* fp =  fopen(path, "r");
-    if (fp != NULL) {
-        while(fgets(buff, width, fp) != NULL) {
-            mvwprintw(win, i, 0, buff);
-            i++;
-        }
+    if (date_has_entry(dir, dir_size, date)) {
+        FILE* fp = fopen(path, "r");
+        if (fp == NULL) perror("Error opening file");
+
+        wmove(win, 0, 0);
+        while((c = getc(fp)) != EOF) waddch(win, c);
+
         fclose(fp);
     }
 
