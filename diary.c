@@ -9,6 +9,11 @@ struct tm cal_end;
 
 #define DATE_FMT "%Y-%m-%d"
 
+// normally leap is every 4 years,
+// but is skipped every 100 years,
+// unless it is divisible by 400
+#define is_leap(yr) ((yr % 400 == 0) || (yr % 4 == 0 && yr % 100 != 0))
+
 void setup_cal_timeframe()
 {
     raw_time = time(NULL);
@@ -206,14 +211,6 @@ bool date_has_entry(char* dir, size_t dir_size, struct tm* i)
     }
 
     return (access(epath, F_OK) != -1);
-}
-
-bool is_leap(int year)
-{
-    // normally leap is every 4 years,
-    // but is skipped every 100 years,
-    // unless it is divisible by 400
-    return (year % 400 == 0) || (year % 4 == 0 && year % 100 != 0);
 }
 
 void get_date_str(struct tm* date, char* date_str, size_t date_str_size)
