@@ -7,6 +7,8 @@ struct tm curs_date;
 struct tm cal_start;
 struct tm cal_end;
 
+#define DATE_FMT "%Y-%m-%d"
+
 void setup_cal_timeframe()
 {
     raw_time = time(NULL);
@@ -216,7 +218,7 @@ bool is_leap(int year)
 
 void get_date_str(struct tm* date, char* date_str, size_t date_str_size)
 {
-    strftime(date_str, date_str_size, "%Y-%m-%d", date);
+    strftime(date_str, date_str_size, DATE_FMT, date);
 }
 
 /* Writes file path for 'date' entry to 'rpath'. '*rpath' is NULL on error. */
