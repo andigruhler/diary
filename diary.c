@@ -130,7 +130,7 @@ bool go_to(WINDOW* calendar, WINDOW* aside, time_t date, int* cur_pad_pos)
 }
 
 /* Update window 'win' with diary entry from date 'date' */
-void display_entry(char* dir, size_t dir_size, struct tm* date, WINDOW* win, int width)
+void display_entry(const char* dir, size_t dir_size, const struct tm* date, WINDOW* win, int width)
 {
     char path[100];
     char* ppath = path;
