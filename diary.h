@@ -24,7 +24,7 @@ void update_date(WINDOW* header);
 
 bool go_to(WINDOW* calendar, WINDOW* aside, time_t date, int* cur_pad_pos);
 void display_entry(const char* dir, size_t dir_size, const struct tm* date, WINDOW* win, int width);
-void edit_cmd(char* dir, size_t dir_size, struct tm* date, char** rcmd, size_t rcmd_size);
+void edit_cmd(const char* dir, size_t dir_size, const struct tm* date, char** rcmd, size_t rcmd_size);
 
 bool date_has_entry(const char* dir, size_t dir_size, const struct tm* i);
 void get_date_str(const struct tm* date, char* date_str, size_t date_str_size);

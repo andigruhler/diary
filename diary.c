@@ -159,7 +159,7 @@ void display_entry(const char* dir, size_t dir_size, const struct tm* date, WIND
 }
 
 /* Writes edit command for 'date' entry to 'rcmd'. '*rcmd' is NULL on error. */
-void edit_cmd(char* dir, size_t dir_size, struct tm* date, char** rcmd, size_t rcmd_size)
+void edit_cmd(const char* dir, size_t dir_size, const struct tm* date, char** rcmd, size_t rcmd_size)
 {
     // get editor from environment
     char* editor = getenv("EDITOR");
