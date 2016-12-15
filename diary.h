@@ -8,6 +8,7 @@
 #include <errno.h>
 #include <dirent.h>
 #include <ncurses.h>
+#include <locale.h>
 
 #define YEAR_RANGE 1
 #define CAL_WIDTH 21
