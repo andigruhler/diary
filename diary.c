@@ -219,7 +219,7 @@ void get_date_str(const struct tm* date, char* date_str, size_t date_str_size)
 }
 
 /* Writes file path for 'date' entry to 'rpath'. '*rpath' is NULL on error. */
-void fpath(char* dir, size_t dir_size, struct tm* date, char** rpath, size_t rpath_size)
+void fpath(const char* dir, size_t dir_size, const struct tm* date, char** rpath, size_t rpath_size)
 {
     // check size of result path
     if (dir_size + 1 > rpath_size) {
