@@ -256,6 +256,7 @@ void fpath(char* dir, size_t dir_size, struct tm* date, char** rpath, size_t rpa
 }
 
 int main(int argc, char** argv) {
+    setlocale(LC_ALL, "");
     char diary_dir[80];
     char* env_var;
     chtype atrs;
