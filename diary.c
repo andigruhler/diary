@@ -213,7 +213,7 @@ bool date_has_entry(char* dir, size_t dir_size, struct tm* i)
     return (access(epath, F_OK) != -1);
 }
 
-void get_date_str(struct tm* date, char* date_str, size_t date_str_size)
+void get_date_str(const struct tm* date, char* date_str, size_t date_str_size)
 {
     strftime(date_str, date_str_size, DATE_FMT, date);
 }

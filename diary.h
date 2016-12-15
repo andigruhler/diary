@@ -27,7 +27,7 @@ void display_entry(char* dir, size_t dir_size, struct tm* date, WINDOW* win, int
 void edit_cmd(char* dir, size_t dir_size, struct tm* date, char** rcmd, size_t rcmd_size);
 
 bool date_has_entry(char* dir, size_t dir_size, struct tm* i);
-void get_date_str(struct tm* date, char* date_str, size_t date_str_size);
+void get_date_str(const struct tm* date, char* date_str, size_t date_str_size);
 void fpath(char* dir, size_t dir_size, struct tm* date, char** rpath, size_t rpath_size);
 
 #endif
