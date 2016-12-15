@@ -197,7 +197,7 @@ void edit_cmd(char* dir, size_t dir_size, struct tm* date, char** rcmd, size_t r
     strcat(*rcmd, path);
 }
 
-bool date_has_entry(char* dir, size_t dir_size, struct tm* i)
+bool date_has_entry(const char* dir, size_t dir_size, const struct tm* i)
 {
     char epath[100];
     char* pepath = epath;
