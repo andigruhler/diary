@@ -7,6 +7,13 @@ struct tm curs_date;
 struct tm cal_start;
 struct tm cal_end;
 
+#define DATE_FMT "%Y-%m-%d"
+
+// normally leap is every 4 years,
+// but is skipped every 100 years,
+// unless it is divisible by 400
+#define is_leap(yr) ((yr % 400 == 0) || (yr % 4 == 0 && yr % 100 != 0))
+
 void setup_cal_timeframe()
 {
     raw_time = time(NULL);
@@ -123,7 +130,7 @@ bool go_to(WINDOW* calendar, WINDOW* aside, time_t date, int* cur_pad_pos)
 }
 
 /* Update window 'win' with diary entry from date 'date' */
-void display_entry(char* dir, size_t dir_size, struct tm* date, WINDOW* win, int width)
+void display_entry(const char* dir, size_t dir_size, const struct tm* date, WINDOW* win, int width)
 {
     char path[100];
     char* ppath = path;
@@ -152,7 +159,7 @@ void display_entry(char* dir, size_t dir_size, struct tm* date, WINDOW* win, int
 }
 
 /* Writes edit command for 'date' entry to 'rcmd'. '*rcmd' is NULL on error. */
-void edit_cmd(char* dir, size_t dir_size, struct tm* date, char** rcmd, size_t rcmd_size)
+void edit_cmd(const char* dir, size_t dir_size, const struct tm* date, char** rcmd, size_t rcmd_size)
 {
     // get editor from environment
     char* editor = getenv("EDITOR");
@@ -190,7 +197,7 @@ void edit_cmd(char* dir, size_t dir_size, struct tm* date, char** rcmd, size_t r
     strcat(*rcmd, path);
 }
 
-bool date_has_entry(char* dir, size_t dir_size, struct tm* i)
+bool date_has_entry(const char* dir, size_t dir_size, const struct tm* i)
 {
     char epath[100];
     char* pepath = epath;
@@ -206,21 +213,13 @@ bool date_has_entry(char* dir, size_t dir_size, struct tm* i)
     return (access(epath, F_OK) != -1);
 }
 
-bool is_leap(int year)
+void get_date_str(const struct tm* date, char* date_str, size_t date_str_size)
 {
-    // normally leap is every 4 years,
-    // but is skipped every 100 years,
-    // unless it is divisible by 400
-    return (year % 400 == 0) || (year % 4 == 0 && year % 100 != 0);
-}
-
-void get_date_str(struct tm* date, char* date_str, size_t date_str_size)
-{
-    strftime(date_str, date_str_size, "%Y-%m-%d", date);
+    strftime(date_str, date_str_size, DATE_FMT, date);
 }
 
 /* Writes file path for 'date' entry to 'rpath'. '*rpath' is NULL on error. */
-void fpath(char* dir, size_t dir_size, struct tm* date, char** rpath, size_t rpath_size)
+void fpath(const char* dir, size_t dir_size, const struct tm* date, char** rpath, size_t rpath_size)
 {
     // check size of result path
     if (dir_size + 1 > rpath_size) {
