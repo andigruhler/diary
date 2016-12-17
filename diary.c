@@ -6,6 +6,8 @@ struct tm today;
 struct tm curs_date;
 struct tm cal_start;
 struct tm cal_end;
+// 0 = Sunday, 1 = Monday, ..., 6 = Saturday
+int first_weekday = 1;
 
 #define DATE_FMT "%Y-%m-%d"
 
@@ -26,11 +28,11 @@ void setup_cal_timeframe()
     cal_start.tm_mday = 1;
     mktime(&cal_start);
 
-    if (cal_start.tm_wday != 1) {
-        // adjust start date to first Mon before 01.01
+    if (cal_start.tm_wday != first_weekday) {
+        // adjust start date to first_weekday before 01.01
         cal_start.tm_year--;
         cal_start.tm_mon = 11;
-        cal_start.tm_mday = 31 - cal_start.tm_wday + 2;
+        cal_start.tm_mday = 31 - (cal_start.tm_wday - first_weekday) + 1;
         mktime(&cal_start);
     }
 
@@ -43,9 +45,9 @@ void setup_cal_timeframe()
 
 void draw_wdays(WINDOW* head)
 {
-    char** wd;
-    for (wd = (char**)WEEKDAYS; *wd; wd++) {
-        waddstr(head, *wd);
+    int i;
+    for (i = first_weekday; i < first_weekday + 7; i++) {
+        waddstr(head, WEEKDAYS[i % 7]);
         waddch(head, ' ');
     }
     wrefresh(head);
@@ -298,6 +300,22 @@ int main(int argc, char** argv) {
         return 1;
     }
 
+    {
+        // references: locale(5) and util-linux's cal.c
+        // get the base date, 8-digit integer (YYYYMMDD) returned as char *
+        unsigned long d = (uintptr_t) nl_langinfo(_NL_TIME_WEEK_1STDAY);
+        struct tm base = {
+            .tm_sec = 0,
+            .tm_min = 0,
+            .tm_hour = 0,
+            .tm_mday = d % 100,
+            .tm_mon = (d / 100) % 100 - 1,
+            .tm_year = d / (100 * 100) - 1900
+        };
+        mktime(&base);
+        // first_weekday is base date's day of the week offset by (_NL_TIME_FIRST_WEEKDAY - 1)
+        first_weekday = (base.tm_wday + *nl_langinfo(_NL_TIME_FIRST_WEEKDAY) - 1) % 7;
+    }
     setup_cal_timeframe();
 
     initscr();
