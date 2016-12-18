@@ -9,13 +9,14 @@
 #include <dirent.h>
 #include <ncurses.h>
 #include <locale.h>
+#include <langinfo.h>
 
 #define YEAR_RANGE 1
 #define CAL_WIDTH 21
 #define ASIDE_WIDTH 4
 #define MAX_MONTH_HEIGHT 6
 
-static const char* WEEKDAYS[] = {"Mo","Tu","We","Th","Fr","Sa","Su", NULL};
+static const char* WEEKDAYS[] = {"Su","Mo","Tu","We","Th","Fr","Sa"};
 
 void setup_cal_timeframe();
 void draw_wdays(WINDOW* head);
