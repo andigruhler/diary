@@ -4,12 +4,22 @@ PREFIX ?= /usr/local
 BINDIR ?= $(DESTDIR)$(PREFIX)/bin
 
 CC = gcc
-CFLAGS = -lncursesw -Wall
+CFLAGS = -Wall
+UNAME = ${shell uname}
+
+ifeq ($(UNAME),Linux)
+	LIBS = -lncursesw
+endif
+
+ifeq ($(UNAME),Darwin)
+	LIBS = -lncurses
+endif
+
 
 default: $(TARGET)
 
 $(TARGET): $(SRC)
-	$(CC) $(SRC) -o $(TARGET) $(CFLAGS)
+	$(CC) $(SRC) -o $(TARGET) $(CFLAGS) $(LIBS)
 
 clean:
 	rm -f $(TARGET)
