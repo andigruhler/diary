@@ -55,3 +55,6 @@ Note: for *BSD users run gmake.
     J         Go forward by 1 month
     K         Go backward by 1 month
     ```
+
+***
+[![Build Status](https://travis-ci.org/in0rdr/diary.svg?branch=master)](https://travis-ci.org/in0rdr/diary)
