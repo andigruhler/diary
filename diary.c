@@ -300,22 +300,23 @@ int main(int argc, char** argv) {
         return 1;
     }
 
-    {
-        // references: locale(5) and util-linux's cal.c
-        // get the base date, 8-digit integer (YYYYMMDD) returned as char *
-        unsigned long d = (uintptr_t) nl_langinfo(_NL_TIME_WEEK_1STDAY);
-        struct tm base = {
-            .tm_sec = 0,
-            .tm_min = 0,
-            .tm_hour = 0,
-            .tm_mday = d % 100,
-            .tm_mon = (d / 100) % 100 - 1,
-            .tm_year = d / (100 * 100) - 1900
-        };
-        mktime(&base);
-        // first_weekday is base date's day of the week offset by (_NL_TIME_FIRST_WEEKDAY - 1)
-        first_weekday = (base.tm_wday + *nl_langinfo(_NL_TIME_FIRST_WEEKDAY) - 1) % 7;
-    }
+    #ifdef __GNU_LIBRARY__
+    // references: locale(5) and util-linux's cal.c
+    // get the base date, 8-digit integer (YYYYMMDD) returned as char *
+    unsigned long d = (uintptr_t) nl_langinfo(_NL_TIME_WEEK_1STDAY);
+    struct tm base = {
+        .tm_sec = 0,
+        .tm_min = 0,
+        .tm_hour = 0,
+        .tm_mday = d % 100,
+        .tm_mon = (d / 100) % 100 - 1,
+        .tm_year = d / (100 * 100) - 1900
+    };
+    mktime(&base);
+    // first_weekday is base date's day of the week offset by (_NL_TIME_FIRST_WEEKDAY - 1)
+    first_weekday = (base.tm_wday + *nl_langinfo(_NL_TIME_FIRST_WEEKDAY) - 1) % 7;
+    #endif
+
     setup_cal_timeframe();
 
     initscr();
