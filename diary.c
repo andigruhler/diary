@@ -300,7 +300,7 @@ int main(int argc, char** argv) {
         return 1;
     }
 
-    {
+    #ifdef __GNU_LIBRARY__
         // references: locale(5) and util-linux's cal.c
         // get the base date, 8-digit integer (YYYYMMDD) returned as char *
         #ifdef _NL_TIME_WEEK_1STDAY
@@ -329,7 +329,8 @@ int main(int argc, char** argv) {
             CFRelease(currentCalendar);
             first_weekday = (base.tm_wday + first_day_of_week - 1) % 7;
         #endif
-    }
+    #endif
+
     setup_cal_timeframe();
 
     initscr();
