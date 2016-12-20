@@ -1,6 +1,11 @@
 #ifndef DIARY
 #define DIARY
 
+
+#ifdef __MACH__
+	#include <CoreFoundation/CoreFoundation.h>
+#endif
+#include <stdint.h>
 #include <stdlib.h>
 #include <unistd.h>
 #include <string.h>

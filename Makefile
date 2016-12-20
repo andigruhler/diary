@@ -7,12 +7,16 @@ CC = gcc
 CFLAGS = -Wall
 UNAME = ${shell uname}
 
+ifeq ($(UNAME),FreeBSD)
+	LIBS = -lncurses
+endif
+
 ifeq ($(UNAME),Linux)
 	LIBS = -lncursesw
 endif
 
 ifeq ($(UNAME),Darwin)
-	LIBS = -lncurses
+	LIBS = -lncurses -framework CoreFoundation
 endif
 
 

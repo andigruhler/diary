@@ -14,6 +14,7 @@ This is a text based diary, inspired by [khal](https://github.com/pimutils/khal)
     ```
     make
     ```
+Note: for *BSD users run gmake.
 
 3. Install the binary (optional):
     ```

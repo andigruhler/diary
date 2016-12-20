@@ -303,7 +303,13 @@ int main(int argc, char** argv) {
     {
         // references: locale(5) and util-linux's cal.c
         // get the base date, 8-digit integer (YYYYMMDD) returned as char *
-        unsigned long d = (uintptr_t) nl_langinfo(_NL_TIME_WEEK_1STDAY);
+        #ifdef _NL_TIME_WEEK_1STDAY
+            unsigned long d = (uintptr_t) nl_langinfo(_NL_TIME_WEEK_1STDAY);
+        // reference: https://sourceware.org/glibc/wiki/Locales
+        // assign a static date value 19971130 (a Sunday)
+        #else
+            unsigned long d = 19971130;
+        #endif
         struct tm base = {
             .tm_sec = 0,
             .tm_min = 0,
@@ -314,7 +320,15 @@ int main(int argc, char** argv) {
         };
         mktime(&base);
         // first_weekday is base date's day of the week offset by (_NL_TIME_FIRST_WEEKDAY - 1)
-        first_weekday = (base.tm_wday + *nl_langinfo(_NL_TIME_FIRST_WEEKDAY) - 1) % 7;
+        #ifdef __linux__
+            first_weekday = (base.tm_wday + *nl_langinfo(_NL_TIME_FIRST_WEEKDAY) - 1) % 7;
+        #elif defined __MACH__
+            CFIndex first_day_of_week;
+            CFCalendarRef currentCalendar = CFCalendarCopyCurrent();
+            first_day_of_week = CFCalendarGetFirstWeekday(currentCalendar);
+            CFRelease(currentCalendar);
+            first_weekday = (base.tm_wday + first_day_of_week - 1) % 7;
+        #endif
     }
     setup_cal_timeframe();
 
