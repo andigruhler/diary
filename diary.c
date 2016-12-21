@@ -235,7 +235,7 @@ void fpath(const char* dir, size_t dir_size, const struct tm* date, char** rpath
 
     // check for terminating '/' in path
     if (dir[dir_size - 1] != '/') {
-        // check size again to accomodate '/'
+        // check size again to accommodate '/'
         if (dir_size + 1 > rpath_size) {
             fprintf(stderr, "Directory path too long");
             *rpath = NULL;
