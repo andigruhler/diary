@@ -54,6 +54,9 @@ Note: for *BSD users run gmake.
 
     J         Go forward by 1 month
     K         Go backward by 1 month
+
+    pagedown  scroll down entry by half-page
+    pageup    scroll up entry by half-page
     ```
 
 ***
