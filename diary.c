@@ -576,6 +576,5 @@ int main(int argc, char** argv) {
     } while (ch != 'q');
 
     endwin();
-    system("clear");
     return 0;
 }
