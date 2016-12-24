@@ -49,6 +49,9 @@ Note: for *BSD users run gmake.
     h, left   go left by 1 day
     l, right  go right by 1 day
 
+    N         go to the previous diary entry
+    n         go to the next diary entry
+
     g         go to the first date
     G         go to the last date
 

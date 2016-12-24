@@ -256,6 +256,50 @@ void fpath(const char* dir, size_t dir_size, const struct tm* date, char** rpath
     strcat(*rpath, dstr);
 }
 
+/*
+ * Finds the most recent date before <current> that has a diary entry, or
+ * <current> itself if there is no previous diary entry
+ */
+struct tm find_previous_date(const struct tm current, const char* diary_dir, size_t diary_dir_size)
+{
+
+    time_t start = mktime(&cal_start);
+    struct tm it = current;
+    it.tm_mday--;
+
+    while (mktime(&it) >= start) {
+        if (date_has_entry(diary_dir, diary_dir_size, &it)) {
+            return it;
+        }
+
+        it.tm_mday--;
+    }
+
+    return current;
+}
+
+/*
+ * Finds the next date after <current> that has a diary entry, or <current>
+ * if there is no next diary entry
+ */
+struct tm find_next_date(const struct tm current, const char* diary_dir, size_t diary_dir_size)
+{
+
+    time_t end = mktime(&cal_end);
+    struct tm it = current;
+    it.tm_mday++;
+
+    while (mktime(&it) <= end) {
+        if (date_has_entry(diary_dir, diary_dir_size, &it)) {
+            return it;
+        }
+
+        it.tm_mday++;
+    }
+
+    return current;
+}
+
 int main(int argc, char** argv) {
     setlocale(LC_ALL, "");
     char diary_dir[80];
@@ -502,6 +546,16 @@ int main(int argc, char** argv) {
                     prefresh(cal, pad_pos, 0, 1, ASIDE_WIDTH,
                              LINES - 1, ASIDE_WIDTH + CAL_WIDTH);
                 }
+                break;
+            // Move to the previous diary entry
+            case 'N':
+                new_date = find_previous_date(new_date, diary_dir, strlen(diary_dir));
+                mv_valid = go_to(cal, aside, mktime(&new_date), &pad_pos);
+                break;
+            // Move to the next diary entry
+            case 'n':
+                new_date = find_next_date(new_date, diary_dir, strlen(diary_dir));
+                mv_valid = go_to(cal, aside, mktime(&new_date), &pad_pos);
                 break;
         }
 
