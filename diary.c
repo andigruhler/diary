@@ -53,7 +53,7 @@ void draw_wdays(WINDOW* head)
     wrefresh(head);
 }
 
-void draw_calendar(WINDOW* number_pad, WINDOW* month_pad, char* diary_dir, size_t diary_dir_size)
+void draw_calendar(WINDOW* number_pad, WINDOW* month_pad, const char* diary_dir, size_t diary_dir_size)
 {
     struct tm i = cal_start;
     char month[10];
@@ -302,7 +302,7 @@ struct tm find_next_date(const struct tm current, const char* diary_dir, size_t 
 
 int main(int argc, char** argv) {
     setlocale(LC_ALL, "");
-    char diary_dir[80];
+    char diary_dir_init[80];
     char* env_var;
     chtype atrs;
 
@@ -318,18 +318,20 @@ int main(int argc, char** argv) {
             return 1;
         }
 
-        if (strlen(env_var) + 1 > sizeof diary_dir) {
+        if (strlen(env_var) + 1 > sizeof diary_dir_init) {
             fprintf(stderr, "Diary directory path too long\n");
             return 1;
         }
-        strcpy(diary_dir, env_var);
+        strcpy(diary_dir_init, env_var);
     } else {
-        if (strlen(argv[1]) + 1 > sizeof diary_dir) {
+        if (strlen(argv[1]) + 1 > sizeof diary_dir_init) {
             fprintf(stderr, "Diary directory path too long\n");
             return 1;
         }
-        strcpy(diary_dir, argv[1]);
+        strcpy(diary_dir_init, argv[1]);
     }
+
+    const char* diary_dir = diary_dir_init;
 
     // check if that directory exists
     DIR* diary_dir_ptr = opendir(diary_dir);
@@ -408,6 +410,8 @@ int main(int argc, char** argv) {
     WINDOW* prev = newwin(prev_height, prev_width, 1, ASIDE_WIDTH + CAL_WIDTH);
     display_entry(diary_dir, strlen(diary_dir), &today, prev, prev_width);
 
+    size_t diary_dir_size = strlen(diary_dir);
+
     do {
         ch = wgetch(cal);
         // new_date represents the desired date the user wants to go_to(),
@@ -418,7 +422,7 @@ int main(int argc, char** argv) {
         char pth[100];
         char* ppth = pth;
         char dstr[16];
-        edit_cmd(diary_dir, strlen(diary_dir), &new_date, &pecmd, sizeof ecmd);
+        edit_cmd(diary_dir, diary_dir_size, &new_date, &pecmd, sizeof ecmd);
 
         switch(ch) {
             // basic movements
@@ -488,9 +492,9 @@ int main(int argc, char** argv) {
             // delete entry
             case 'd':
             case 'x':
-                if (date_has_entry(diary_dir, strlen(diary_dir), &curs_date)) {
+                if (date_has_entry(diary_dir, diary_dir_size, &curs_date)) {
                     // get file path of entry and delete entry
-                    fpath(diary_dir, strlen(diary_dir), &curs_date, &ppth, sizeof pth);
+                    fpath(diary_dir, diary_dir_size, &curs_date, &ppth, sizeof pth);
                     if (ppth == NULL) {
                         fprintf(stderr, "Error retrieving file path for entry removal");
                         break;
@@ -538,7 +542,7 @@ int main(int argc, char** argv) {
                 keypad(cal, TRUE);
 
                 // mark newly created entry
-                if (date_has_entry(diary_dir, strlen(diary_dir), &curs_date)) {
+                if (date_has_entry(diary_dir, diary_dir_size, &curs_date)) {
                     atrs = winch(cal) & A_ATTRIBUTES;
                     wchgat(cal, 2, atrs | A_BOLD, 0, NULL);
 
@@ -549,12 +553,12 @@ int main(int argc, char** argv) {
                 break;
             // Move to the previous diary entry
             case 'N':
-                new_date = find_previous_date(new_date, diary_dir, strlen(diary_dir));
+                new_date = find_previous_date(new_date, diary_dir, diary_dir_size);
                 mv_valid = go_to(cal, aside, mktime(&new_date), &pad_pos);
                 break;
             // Move to the next diary entry
             case 'n':
-                new_date = find_next_date(new_date, diary_dir, strlen(diary_dir));
+                new_date = find_next_date(new_date, diary_dir, diary_dir_size);
                 mv_valid = go_to(cal, aside, mktime(&new_date), &pad_pos);
                 break;
         }
@@ -567,7 +571,7 @@ int main(int argc, char** argv) {
             wresize(prev, prev_height, prev_width);
 
             // read the diary
-            display_entry(diary_dir, strlen(diary_dir), &curs_date, prev, prev_width);
+            display_entry(diary_dir, diary_dir_size, &curs_date, prev, prev_width);
         }
     } while (ch != 'q');
 
