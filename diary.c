@@ -257,44 +257,32 @@ void fpath(const char* dir, size_t dir_size, const struct tm* date, char** rpath
 }
 
 /*
- * Finds the most recent date before <current> that has a diary entry, or
- * <current> itself if there is no previous diary entry
+ * Finds the date with a diary entry closest to <current>.
+ * Depending on <search_backwards>, it will find the most recent
+ * previous date or the oldest next date with an entry. If no
+ * entry is found within the calendar size, <current> is returned.
  */
-struct tm find_previous_date(const struct tm current, const char* diary_dir, size_t diary_dir_size)
+struct tm find_closest_entry(const struct tm current,
+                             bool search_backwards,
+                             const char* diary_dir,
+                             size_t diary_dir_size)
 {
+    time_t end_time = mktime(&cal_end);
+    time_t start_time = mktime(&cal_start);
 
-    time_t start = mktime(&cal_start);
+    int step = search_backwards ? -1 : +1;
+
     struct tm it = current;
-    it.tm_mday--;
+    it.tm_mday += step;
 
-    while (mktime(&it) >= start) {
+    time_t it_time = mktime(&it);
+    for( ; it_time >= start_time && it_time <= end_time; it_time = mktime(&it)) {
+
         if (date_has_entry(diary_dir, diary_dir_size, &it)) {
             return it;
         }
 
-        it.tm_mday--;
-    }
-
-    return current;
-}
-
-/*
- * Finds the next date after <current> that has a diary entry, or <current>
- * if there is no next diary entry
- */
-struct tm find_next_date(const struct tm current, const char* diary_dir, size_t diary_dir_size)
-{
-
-    time_t end = mktime(&cal_end);
-    struct tm it = current;
-    it.tm_mday++;
-
-    while (mktime(&it) <= end) {
-        if (date_has_entry(diary_dir, diary_dir_size, &it)) {
-            return it;
-        }
-
-        it.tm_mday++;
+        it.tm_mday += step;
     }
 
     return current;
@@ -553,12 +541,12 @@ int main(int argc, char** argv) {
                 break;
             // Move to the previous diary entry
             case 'N':
-                new_date = find_previous_date(new_date, diary_dir, diary_dir_size);
+                new_date = find_closest_entry(new_date, true, diary_dir, diary_dir_size);
                 mv_valid = go_to(cal, aside, mktime(&new_date), &pad_pos);
                 break;
             // Move to the next diary entry
             case 'n':
-                new_date = find_next_date(new_date, diary_dir, diary_dir_size);
+                new_date = find_closest_entry(new_date, false, diary_dir, diary_dir_size);
                 mv_valid = go_to(cal, aside, mktime(&new_date), &pad_pos);
                 break;
         }
@@ -576,5 +564,6 @@ int main(int argc, char** argv) {
     } while (ch != 'q');
 
     endwin();
+    system("clear");
     return 0;
 }
