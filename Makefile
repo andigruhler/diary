@@ -15,7 +15,8 @@ ifeq ($(UNAME),FreeBSD)
 endif
 
 ifeq ($(UNAME),Linux)
-	LDLIBS = -lncursesw
+	CFLAGS += $(shell pkg-config --cflags ncursesw)
+	LDLIBS += $(shell pkg-config --libs   ncursesw)
 endif
 
 ifeq ($(UNAME),Darwin)

@@ -15,7 +15,7 @@
 #include <time.h>
 #include <errno.h>
 #include <dirent.h>
-#include <ncursesw/ncurses.h>
+#include <ncurses.h>
 #include <locale.h>
 #include <langinfo.h>
 #include <sys/param.h>
