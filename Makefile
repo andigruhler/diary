@@ -5,25 +5,28 @@ BINDIR ?= $(DESTDIR)$(PREFIX)/bin
 
 CC = gcc
 CFLAGS = -Wall
+CPPFLAGS += -D_XOPEN_SOURCE           # for wcwidth
+CPPFLAGS += -D_XOPEN_SOURCE_EXTENDED  # for waddnwstr
+
 UNAME = ${shell uname}
 
 ifeq ($(UNAME),FreeBSD)
-	LIBS = -lncurses
+	LDLIBS = -lncurses
 endif
 
 ifeq ($(UNAME),Linux)
-	LIBS = -lncursesw
+	CFLAGS += $(shell pkg-config --cflags ncursesw)
+	LDLIBS += $(shell pkg-config --libs   ncursesw)
 endif
 
 ifeq ($(UNAME),Darwin)
-	LIBS = -lncurses -framework CoreFoundation
+	LDLIBS = -lncurses -framework CoreFoundation
 endif
 
 
 default: $(TARGET)
 
 $(TARGET): $(SRC)
-	$(CC) $(SRC) -o $(TARGET) $(CFLAGS) $(LIBS)
 
 clean:
 	rm -f $(TARGET)

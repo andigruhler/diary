@@ -131,12 +131,12 @@ bool go_to(WINDOW* calendar, WINDOW* aside, time_t date, int* cur_pad_pos)
     return true;
 }
 
-/* Update window 'win' with diary entry from date 'date' */
-void display_entry(const char* dir, size_t dir_size, const struct tm* date, WINDOW* win, int width)
+/* Reads diary entry from date 'date' */
+void read_entry(const char* dir, size_t dir_size, const struct tm* date,
+                WINDOW* entry, int* y, int* x, int* height, int* width)
 {
     char path[100];
     char* ppath = path;
-    int c;
 
     // get entry path
     fpath(dir, dir_size, date, &ppath, sizeof path);
@@ -145,19 +145,87 @@ void display_entry(const char* dir, size_t dir_size, const struct tm* date, WIND
         return;
     }
 
-    wclear(win);
+    wclear(entry);
+    *height = 1;
 
+    int WIDTH = *width;  // max line width
     if (date_has_entry(dir, dir_size, date)) {
         FILE* fp = fopen(path, "r");
         if (fp == NULL) perror("Error opening file");
 
-        wmove(win, 0, 0);
-        while((c = getc(fp)) != EOF) waddch(win, c);
+        /* basic wrapping, breaking at spaces and char columns == 2,
+         * leading spaces/tabs are removed.
+         **/
+        int w = WIDTH;  // width left in current line
+        wchar_t line[WIDTH + 2];  // +1 for word on/over WIDTH
+        wchar_t* ptr;
+        while ((ptr = fgetws(line, WIDTH + 2, fp))) {
+            wchar_t* ptr2;  // where could be broken
+            while (*ptr) {
+                if (w == WIDTH) // no leading spaces or tabs
+                    while (*ptr == L' ' || *ptr == L'\t') ptr++;
+
+                ptr2 = ptr + 1;
+                int wdcol;
+                if (wcwidth(*ptr) == 2) {
+                    wdcol = 2;
+                } else {
+                    /* find next closest break point, either at
+                     *   1. next space or
+                     *   2. next char has column == 2
+                     * if not found, ptr2 = line + wcslen(line) == end of line
+                     **/
+                    wchar_t* p = wcsstr(ptr2, L" ");
+                    while (*ptr2 && wcwidth(*ptr2) != 2) ptr2++;
+                    if (p)
+                        ptr2 = MIN(p, ptr2);
+                    for (p = ptr, wdcol = 0; p < ptr2; p++)
+                        wdcol += wcwidth(*p);
+                }
+
+                int wdlen = ptr2 - ptr;
+                if (wdcol <= w) {
+                    if (wdlen && ptr[wdlen - 1] == L'\n') {
+                        wresize(entry, ++*height, WIDTH);
+                        w = WIDTH + wdcol;
+                    }
+                } else {
+                    // no new line if first word width > WIDTH
+                    if (w != WIDTH) {
+                        wresize(entry, ++*height, WIDTH);
+                        wmove(entry, *height - 1, 0);
+                        w = WIDTH;
+                    }
+                    if (wdcol <= w)
+                        continue;
+                    for (ptr2 = ptr, wdcol = 0; wdcol <= w; ptr2++)
+                        wdcol += wcwidth(*ptr2);
+                    wdlen = ptr2 - ptr;
+                }
+                w -= wdcol;
+                waddnwstr(entry, ptr, wdlen);
+                ptr += wdlen;
+            }
+        }
 
         fclose(fp);
     }
 
-    wrefresh(win);
+    // full available height ensures erasing previous entry
+    if (*height < LINES - 1)
+        wresize(entry, LINES - 1, WIDTH);
+    scroll_entry(entry, y, x, *height, *width);
+}
+
+/* Scrolls diary entry */
+void scroll_entry(WINDOW* entry, int *y, int *x, int height, int width)
+{
+    // horizonal scrolling is not supported, x has to be 0
+    assert(*x == 0);
+
+    // check y
+    *y = MIN(MAX(0, *y), MAX(0, height - LINES));
+    prefresh(entry, *y, *x, 1, ASIDE_WIDTH + CAL_WIDTH, LINES - 1, COLS - 1);
 }
 
 /* Writes edit command for 'date' entry to 'rcmd'. '*rcmd' is NULL on error. */
@@ -352,8 +420,6 @@ int main(int argc, char** argv) {
     int pad_pos = 0;
     int syear = 0, smonth = 0, sday = 0;
     struct tm new_date;
-    int prev_width = COLS - ASIDE_WIDTH - CAL_WIDTH;
-    int prev_height = LINES - 1;
 
     bool mv_valid = go_to(cal, aside, raw_time, &pad_pos);
     // mark current day
@@ -361,8 +427,13 @@ int main(int argc, char** argv) {
     wchgat(cal, 2, atrs | A_UNDERLINE, 0, NULL);
     prefresh(cal, pad_pos, 0, 1, ASIDE_WIDTH, LINES - 1, ASIDE_WIDTH + CAL_WIDTH);
 
-    WINDOW* prev = newwin(prev_height, prev_width, 1, ASIDE_WIDTH + CAL_WIDTH);
-    display_entry(diary_dir, strlen(diary_dir), &today, prev, prev_width);
+    int entry_y = 0;
+    int entry_x = 0;
+    int entry_width = COLS - ASIDE_WIDTH - CAL_WIDTH;
+    int entry_height = 1;
+    WINDOW* entry = newpad(entry_height, entry_width);
+    read_entry(diary_dir, strlen(diary_dir), &today,
+               entry, &entry_y, &entry_x, &entry_height, &entry_width);
 
     do {
         ch = wgetch(cal);
@@ -376,7 +447,14 @@ int main(int argc, char** argv) {
         char dstr[16];
         edit_cmd(diary_dir, strlen(diary_dir), &new_date, &pecmd, sizeof ecmd);
 
+        mv_valid = false;
         switch(ch) {
+            case KEY_RESIZE:
+                entry_width = COLS - ASIDE_WIDTH - CAL_WIDTH;
+                wresize(entry, LINES - 1, entry_width);
+                mv_valid = go_to(cal, aside, mktime(&new_date), &pad_pos);
+                break;
+
             // basic movements
             case 'j':
             case KEY_DOWN:
@@ -441,6 +519,17 @@ int main(int argc, char** argv) {
                 new_date = today;
                 mv_valid = go_to(cal, aside, raw_time, &pad_pos);
                 break;
+
+            // basic movements in entry
+            case KEY_NPAGE:
+                entry_y += (LINES - 1) / 2;
+                scroll_entry(entry, &entry_y, &entry_x, entry_height, entry_width);
+                break;
+            case KEY_PPAGE:
+                entry_y -= (LINES - 1) / 2;
+                scroll_entry(entry, &entry_y, &entry_x, entry_height, entry_width);
+                break;
+
             // delete entry
             case 'd':
             case 'x':
@@ -502,18 +591,15 @@ int main(int argc, char** argv) {
                     prefresh(cal, pad_pos, 0, 1, ASIDE_WIDTH,
                              LINES - 1, ASIDE_WIDTH + CAL_WIDTH);
                 }
+                mv_valid = true;
                 break;
         }
 
         if (mv_valid) {
             update_date(header);
 
-            // adjust prev width (if terminal was resized in the mean time)
-            prev_width = COLS - ASIDE_WIDTH - CAL_WIDTH;
-            wresize(prev, prev_height, prev_width);
-
-            // read the diary
-            display_entry(diary_dir, strlen(diary_dir), &curs_date, prev, prev_width);
+            read_entry(diary_dir, strlen(diary_dir), &curs_date,
+                       entry, &entry_y, &entry_x, &entry_height, &entry_width);
         }
     } while (ch != 'q');
 
