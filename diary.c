@@ -289,7 +289,7 @@ struct tm find_closest_entry(const struct tm current,
 
 int main(int argc, char** argv) {
     setlocale(LC_ALL, "");
-    char diary_dir_init[80];
+    char diary_dir[80];
     char* env_var;
     chtype atrs;
 
@@ -305,20 +305,18 @@ int main(int argc, char** argv) {
             return 1;
         }
 
-        if (strlen(env_var) + 1 > sizeof diary_dir_init) {
+        if (strlen(env_var) + 1 > sizeof diary_dir) {
             fprintf(stderr, "Diary directory path too long\n");
             return 1;
         }
-        strcpy(diary_dir_init, env_var);
+        strcpy(diary_dir, env_var);
     } else {
-        if (strlen(argv[1]) + 1 > sizeof diary_dir_init) {
+        if (strlen(argv[1]) + 1 > sizeof diary_dir) {
             fprintf(stderr, "Diary directory path too long\n");
             return 1;
         }
-        strcpy(diary_dir_init, argv[1]);
+        strcpy(diary_dir, argv[1]);
     }
-
-    const char* diary_dir = diary_dir_init;
 
     // check if that directory exists
     DIR* diary_dir_ptr = opendir(diary_dir);
@@ -387,6 +385,7 @@ int main(int argc, char** argv) {
     struct tm new_date;
     int prev_width = COLS - ASIDE_WIDTH - CAL_WIDTH;
     int prev_height = LINES - 1;
+    size_t diary_dir_size = strlen(diary_dir);
 
     bool mv_valid = go_to(cal, aside, raw_time, &pad_pos);
     // mark current day
@@ -397,7 +396,6 @@ int main(int argc, char** argv) {
     WINDOW* prev = newwin(prev_height, prev_width, 1, ASIDE_WIDTH + CAL_WIDTH);
     display_entry(diary_dir, strlen(diary_dir), &today, prev, prev_width);
 
-    size_t diary_dir_size = strlen(diary_dir);
 
     do {
         ch = wgetch(cal);
