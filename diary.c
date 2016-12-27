@@ -540,20 +540,15 @@ int main(int argc, char** argv) {
                     fprintf(stderr, "Error retrieving edit command");
                     break;
                 }
-                curs_set(1);
+                endwin();
                 system(ecmd);
-                curs_set(0);
-                keypad(cal, TRUE);
 
                 // mark newly created entry
                 if (date_has_entry(&state, &state.curs_date)) {
                     atrs = winch(cal) & A_ATTRIBUTES;
                     wchgat(cal, 2, atrs | A_BOLD, 0, NULL);
-
-                    // refresh the calendar to add highlighting
-                    prefresh(cal, pad_pos, 0, 1, ASIDE_WIDTH,
-                             LINES - 1, ASIDE_WIDTH + CAL_WIDTH);
                 }
+                mv_valid = go_to(&state, cal, aside, mktime(&new_date), &pad_pos);
                 break;
             // Move to the previous diary entry
             case 'N':
@@ -580,6 +575,5 @@ int main(int argc, char** argv) {
     } while (ch != 'q');
 
     endwin();
-    system("clear");
     return 0;
 }
