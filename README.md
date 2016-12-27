@@ -14,6 +14,7 @@ This is a text based diary, inspired by [khal](https://github.com/pimutils/khal)
     ```
     make
     ```
+Note: for *BSD users run gmake.
 
 3. Install the binary (optional):
     ```
@@ -48,9 +49,17 @@ This is a text based diary, inspired by [khal](https://github.com/pimutils/khal)
     h, left   go left by 1 day
     l, right  go right by 1 day
 
+    N         go to the previous diary entry
+    n         go to the next diary entry
+
     g         go to the first date
     G         go to the last date
 
     J         Go forward by 1 month
     K         Go backward by 1 month
+
+    q         quit the program
     ```
+
+***
+[![Build Status](https://travis-ci.org/in0rdr/diary.svg?branch=master)](https://travis-ci.org/in0rdr/diary)
