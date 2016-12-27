@@ -425,6 +425,10 @@ int main(int argc, char** argv) {
         edit_cmd(&state, &new_date, &pecmd, sizeof ecmd);
 
         switch(ch) {
+            case KEY_RESIZE:
+                mv_valid = go_to(&state, cal, aside, mktime(&new_date), &pad_pos);
+                break;
+
             // basic movements
             case 'j':
             case KEY_DOWN:
