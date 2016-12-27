@@ -8,28 +8,29 @@ CFLAGS = -Wall
 UNAME = ${shell uname}
 
 ifeq ($(UNAME),FreeBSD)
-	LIBS = -lncurses
+	LDLIBS = -lncurses
 endif
 
 ifeq ($(UNAME),Linux)
-	LIBS = -lncursesw
+	LDLIBS = -lncursesw
 endif
 
 ifeq ($(UNAME),Darwin)
-	LIBS = -lncurses -framework CoreFoundation
+	LDLIBS = -lncurses -framework CoreFoundation
 endif
 
 
 default: $(TARGET)
 
 $(TARGET): $(SRC)
-	$(CC) $(SRC) -o $(TARGET) $(CFLAGS) $(LIBS)
+
+$(SRC): diary.h
 
 clean:
-	rm -f $(TARGET)
+	$(RM) $(TARGET)
 
 install: $(TARGET)
-	cp $(TARGET) $(BINDIR)/$(TARGET)
+	install -D -m 755 $(TARGET) $(BINDIR)/$(TARGET)
 
 uninstall:
-	rm -f $(BINDIR)/$(TARGET)
+	$(RM) $(BINDIR)/$(TARGET)
