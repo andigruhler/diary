@@ -1,6 +1,6 @@
 .TH DIARY 1
 .SH NAME
-diary - Simple text-based diary program
+diary \- Simple text-based diary program
 
 .SH SYNOPSIS
 .B diary
@@ -19,6 +19,9 @@ If this variable is set to a directory that can be opened,
 will use it to store diary files. Diary files are simple text files named
 after their date, formatted like YYYY-MM-DD. All other files are ignored.
 
+.IP EDITOR
+The program used to edit diary entries.
+
 
 .SH ARGUMENTS
 
@@ -33,16 +36,16 @@ tab(|);
 l l.
 Key(s)    | Action
 ======    | ======
-e, enter  | edit current entry
-d, x      | delete current entry
-q         | quit the program
-
 k, up     | go backward by 1 week
 j, down   | go forward by 1 week
 h, left   | go backward by 1 day
 l, right  | go forward by 1 day
 J         | go forward by 1 month
 K         | go backward by 1 month
+
+e, enter  | edit current entry
+d, x      | delete current entry
+q         | quit the program
 
 N         | go to the previous diary entry
 n         | go to the next diary entry
@@ -52,7 +55,6 @@ G         | go to the last date
 t         | jump to today
 s         | jump to specific day
 .TE
-
 
 
 .SH DEVELOPMENT
