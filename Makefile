@@ -3,6 +3,9 @@ SRC = diary.c
 PREFIX ?= /usr/local
 BINDIR ?= $(DESTDIR)$(PREFIX)/bin
 
+MANDIR := $(PREFIX)/share/man
+MAN1 = diary.1
+
 CC = gcc
 CFLAGS = -Wall
 UNAME = ${shell uname}
@@ -30,6 +33,8 @@ clean:
 
 install: $(TARGET)
 	cp $(TARGET) $(BINDIR)/$(TARGET)
+	install -D -m 644 $(MAN1) $(MANDIR)/man1/$(MAN1)
 
 uninstall:
 	rm -f $(BINDIR)/$(TARGET)
+	rm -f $(MANDIR)/man1/$(MAN1)
