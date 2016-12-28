@@ -33,9 +33,7 @@ clean:
 
 install: $(TARGET)
 	cp $(TARGET) $(BINDIR)/$(TARGET)
-	mkdir -p $(MANDIR)/man1
-	cp -f $(MAN1) $(MANDIR)/man1
-	chmod 644 $(MANDIR)/man1/$(MAN1)
+	install -D -m 644 $(MAN1) $(MANDIR)/man1/$(MAN1)
 
 uninstall:
 	rm -f $(BINDIR)/$(TARGET)
