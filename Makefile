@@ -33,7 +33,8 @@ clean:
 
 install: $(TARGET)
 	cp $(TARGET) $(BINDIR)/$(TARGET)
-	install -D -m 644 $(MAN1) $(MANDIR)/man1/$(MAN1)
+	install -d $(MANDIR)/man1
+	install -m644 $(MAN1) $(MANDIR)/man1/$(MAN1)
 
 uninstall:
 	rm -f $(BINDIR)/$(TARGET)
