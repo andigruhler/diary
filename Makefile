@@ -3,7 +3,7 @@ SRC = diary.c
 PREFIX ?= /usr/local
 BINDIR ?= $(DESTDIR)$(PREFIX)/bin
 
-MANDIR := $(PREFIX)/share/man
+MANDIR := $(DESTDIR)$(PREFIX)/share/man
 MAN1 = diary.1
 
 CC = gcc
