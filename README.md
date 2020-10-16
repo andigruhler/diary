@@ -22,7 +22,7 @@ Note: for *BSD users run gmake.
     ```
 
    By default this will copy the binary to /usr/local/bin. To use a different
-   path prefix, type `sudo make --PREFIX=/usr install` to use /usr/bin for example.
+   path prefix, type `sudo make PREFIX=/usr install` to use /usr/bin for example.
    You can uninstall diary with `sudo make uninstall`.
 
 4. Run the diary, with the folder for the text files as first argument:
