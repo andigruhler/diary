@@ -10,22 +10,7 @@ This is a text based diary, inspired by [khal](https://github.com/pimutils/khal)
     export EDITOR=vim
     ```
 
-2. Compile (requires ncurses):
-    ```
-    make
-    ```
-Note: for *BSD users run gmake.
-
-3. Install the binary (optional):
-    ```
-    sudo make install
-    ```
-
-   By default this will copy the binary to /usr/local/bin. To use a different
-   path prefix, type `sudo make PREFIX=/usr install` to use /usr/bin for example.
-   You can uninstall diary with `sudo make uninstall`.
-
-4. Run the diary, with the folder for the text files as first argument:
+2. Run the diary, with the folder for the text files as first argument:
     ```
     diary ~/.diary
     ```
@@ -36,7 +21,7 @@ Note: for *BSD users run gmake.
 
    The text files in this folder will be named 'yyyy-mm-dd'.
 
-5. Use the keypad or VIM-like shortcuts to move between dates:
+3. Use the keypad or VIM-like shortcuts to move between dates:
 
     ```
     e, Enter  Edit the current entry
@@ -61,5 +46,25 @@ Note: for *BSD users run gmake.
     q         quit the program
     ```
 
-***
+## Install
+
+Pre-built packages can be installed from the [Open Build Service (OBS) repo](https://build.opensuse.org/package/show/home:in0rdr/diary)
+
+## Build
 [![Build Status](https://travis-ci.org/in0rdr/diary.svg?branch=master)](https://travis-ci.org/in0rdr/diary)
+
+
+1. Compile (requires ncurses):
+    ```
+    make
+    ```
+Note: for *BSD users run gmake.
+
+2. Install the binary (optional):
+    ```
+    sudo make install
+    ```
+
+   By default this will copy the binary to /usr/local/bin. To use a different
+   path prefix, type `sudo make PREFIX=/usr install` to use /usr/bin for example.
+   You can uninstall diary with `sudo make uninstall`.
