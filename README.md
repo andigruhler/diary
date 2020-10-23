@@ -48,7 +48,7 @@ This is a text based diary, inspired by [khal](https://github.com/pimutils/khal)
 
 ## Install
 
-Pre-built packages can be installed from the [Open Build Service (OBS) repo](https://build.opensuse.org/package/show/home:in0rdr/diary)
+Pre-built packages can be installed from the [Open Build Service (OBS)](https://software.opensuse.org//download.html?project=home%3Ain0rdr&package=diary)
 
 ## Build
 [![Build Status](https://travis-ci.org/in0rdr/diary.svg?branch=master)](https://travis-ci.org/in0rdr/diary)
