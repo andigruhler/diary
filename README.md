@@ -46,6 +46,8 @@ This is a text based diary, inspired by [khal](https://github.com/pimutils/khal)
     q         quit the program
     ```
 
+![diary cheet sheet](https://raw.githubusercontent.com/in0rdr/diary/master/diary-cheat-sheet.png)
+
 ## Install
 
 Pre-built packages can be installed from the [Open Build Service (OBS)](https://software.opensuse.org//download.html?project=home%3Ain0rdr&package=diary)
