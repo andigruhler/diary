@@ -8,6 +8,7 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <getopt.h>
 #include <string.h>
 #include <time.h>
 #include <errno.h>
@@ -16,6 +17,7 @@
 #include <locale.h>
 #include <langinfo.h>
 
+#define DIARY_VERSION "0.4"
 #define YEAR_RANGE 1
 #define CAL_WIDTH 21
 #define ASIDE_WIDTH 4

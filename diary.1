@@ -4,12 +4,12 @@ diary \- Simple text-based diary program
 
 .SH SYNOPSIS
 .B diary
-[\fIDIRECTORY\fR]
+[\fIOPTION\fR]... [\fIDIRECTORY\fR]...
 .br
 
 .SH DESCRIPTION
 .B diary
-is a simple text-based program for managing diary entries.
+is a simple text-based program for managing journal entries.
 
 .SH ENVIRONMENT
 
@@ -20,13 +20,14 @@ will use it to store diary files. Diary files are simple text files named
 after their date, formatted like YYYY-MM-DD. All other files are ignored.
 
 .IP EDITOR
-The program used to edit diary entries.
+The program used to edit journal entries.
 
 
 .SH ARGUMENTS
 
 If the argument \fIDIRECTORY\fR is given, diary files are read from and
-stored to that directory, ignoring the DIARY_DIR environment variable.
+stored to that directory, ignoring the DIARY_DIR environment variable or
+any '-d' or '--dir' options.
 
 .SH NAVIGATION
 Navigation is done using the following vim-inspired keyboard shortcuts:
@@ -47,8 +48,8 @@ e, enter  | edit current entry
 d, x      | delete current entry
 q         | quit the program
 
-N         | go to the previous diary entry
-n         | go to the next diary entry
+N         | go to the previous journal entry
+n         | go to the next journal entry
 g         | go to the first date
 G         | go to the last date
 

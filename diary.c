@@ -287,6 +287,34 @@ struct tm find_closest_entry(const struct tm current,
     return current;
 }
 
+/* Set the diary storage directory.
+*  Copies the path to the storage directory from character
+*  string `path` to the destination location `diary_dir`
+*/
+bool set_diary_dir(char* path, char* diary_dir) {
+    if (strlen(path) + 1 > sizeof diary_dir) {
+        fprintf(stderr, "Diary directory path too long\n");
+        return false;
+    }
+    strcpy(diary_dir, path);
+    return true;
+}
+
+void usage() {
+  printf("Usage : diary [OPTION]... [DIRECTORY]...\n");
+  printf("\n");
+  printf("Simple CLI diary (v%s)\n", DIARY_VERSION);
+  printf("Edit journal entries from the command line\n");
+  printf("\n");
+  printf("Options:\n");
+  printf("  -v, --version       : Print diary version\n");
+  printf("  -h, --help          : Show diary help text\n");
+  printf("  -d, --dir DIARY_DIR : Diary storage directory (DIARY_DIR)\n");
+  printf("\n");
+  printf("Full docs and keyboard shortcuts: DIARY(1)\n");
+  printf("or online via: <https://github.com/in0rdr/diary>\n");
+}
+
 int main(int argc, char** argv) {
     setlocale(LC_ALL, "");
     char diary_dir[80];
@@ -300,22 +328,66 @@ int main(int argc, char** argv) {
         // use the environment variable if available
         env_var = getenv("DIARY_DIR");
         if (env_var == NULL) {
-            fprintf(stderr, "The diary directory must be given as command line "
-                            "argument or in the DIARY_DIR environment variable\n");
+
+            fprintf(stderr, "The diary directory must be provided as (non-option) arg, `--dir` arg,\n"
+                            "or in the DIARY_DIR environment variable, see `diary --help` or DIARY(1)\n");
             return 1;
         }
 
-        if (strlen(env_var) + 1 > sizeof diary_dir) {
-            fprintf(stderr, "Diary directory path too long\n");
+        // set diary directory from environment variable
+        if ( !set_diary_dir(env_var, diary_dir) ) {
             return 1;
         }
-        strcpy(diary_dir, env_var);
     } else {
-        if (strlen(argv[1]) + 1 > sizeof diary_dir) {
-            fprintf(stderr, "Diary directory path too long\n");
-            return 1;
+        int option_char;
+        int option_index = 0;
+
+        // define options, see GETOPT(3)
+        static const struct option long_options[] = {
+            { "version", no_argument,       0, 'v' },
+            { "help",    no_argument,       0, 'h' },
+            { "dir",     required_argument, 0, 'd' },
+            { 0,         0,                 0,  0  }
+        };
+
+        // read option characters
+        while (1) {
+            option_char = getopt_long(argc, argv, "vhd:", long_options, &option_index);
+
+            if (option_char == -1) {
+                break;
+            }
+
+            switch (option_char) {
+                case 'v':
+                    // show program version
+                    printf("v%s\n", DIARY_VERSION);
+                    return 0;
+                    break;
+                case 'h':
+                    // show help text
+                    // printf("see man(1) diary\n");
+                    usage();
+                    return 0;
+                    break;
+                case 'd':
+                    // set diary directory from option character
+                    if ( !set_diary_dir(optarg, diary_dir) ) {
+                        return 1;
+                    }
+                    break;
+                default:
+                    printf("?? getopt returned character code 0%o ??\n", option_char);
+            }
         }
-        strcpy(diary_dir, argv[1]);
+
+        if (optind < argc) {
+            // set diary directory from first non-option argv-element,
+            // required for backwarad compatibility with diary <= 0.4
+            if ( !set_diary_dir(argv[optind], diary_dir) ) {
+                return 1;
+            }
+        }
     }
 
     // check if that directory exists
