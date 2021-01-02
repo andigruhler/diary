@@ -6,3 +6,4 @@
 - Yu-Jie Lin (https://github.com/livibetter)
 - Balduin Dettling (https://github.com/mbjd)
 - Avindra Goolcharan (https://github.com/avindra)
+- Oliver Blanthorn (https://github.com/bovine3dom)
