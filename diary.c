@@ -289,14 +289,14 @@ struct tm find_closest_entry(const struct tm current,
 
 /* Set the diary storage directory.
 *  Copies the path to the storage directory from character
-*  string `path` to the destination location `diary_dir`
+*  string `path` to the destination location `pdiary_dir`
 */
-bool set_diary_dir(char* path, char* diary_dir) {
-    if (strlen(path) + 1 > sizeof diary_dir) {
+bool set_diary_dir(char* path, char* pdiary_dir, size_t diary_dir_size) {
+    if (strlen(path) + 1 > diary_dir_size) {
         fprintf(stderr, "Diary directory path too long\n");
         return false;
     }
-    strcpy(diary_dir, path);
+    strcpy(pdiary_dir, path);
     return true;
 }
 
@@ -335,7 +335,7 @@ int main(int argc, char** argv) {
         }
 
         // set diary directory from environment variable
-        if ( !set_diary_dir(env_var, diary_dir) ) {
+        if ( !set_diary_dir(env_var, diary_dir, sizeof diary_dir) ) {
             return 1;
         }
     } else {
@@ -372,7 +372,7 @@ int main(int argc, char** argv) {
                     break;
                 case 'd':
                     // set diary directory from option character
-                    if ( !set_diary_dir(optarg, diary_dir) ) {
+                    if ( !set_diary_dir(optarg, diary_dir, sizeof diary_dir) ) {
                         return 1;
                     }
                     break;
@@ -384,7 +384,7 @@ int main(int argc, char** argv) {
         if (optind < argc) {
             // set diary directory from first non-option argv-element,
             // required for backwarad compatibility with diary <= 0.4
-            if ( !set_diary_dir(argv[optind], diary_dir) ) {
+            if ( !set_diary_dir(argv[optind], diary_dir, sizeof diary_dir) ) {
                 return 1;
             }
         }
