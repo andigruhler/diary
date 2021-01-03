@@ -506,10 +506,12 @@ int main(int argc, char** argv) {
 
             // jump to top/bottom of page
             case 'g':
-                mv_valid = go_to(cal, aside, mktime(&cal_start), &pad_pos);
+                new_date = find_closest_entry(cal_start, false, diary_dir, diary_dir_size);
+                mv_valid = go_to(cal, aside, mktime(&new_date), &pad_pos);
                 break;
             case 'G':
-                mv_valid = go_to(cal, aside, mktime(&cal_end), &pad_pos);
+                new_date = find_closest_entry(cal_end, true, diary_dir, diary_dir_size);
+                mv_valid = go_to(cal, aside, mktime(&new_date), &pad_pos);
                 break;
 
             // jump backward/forward by a month

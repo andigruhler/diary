@@ -37,8 +37,8 @@ This is a text based diary, inspired by [khal](https://github.com/pimutils/khal)
     N         go to the previous diary entry
     n         go to the next diary entry
 
-    g         go to the first date
-    G         go to the last date
+    g         go to the first journal entry
+    G         go to the last journal entry
 
     J         Go forward by 1 month
     K         Go backward by 1 month
