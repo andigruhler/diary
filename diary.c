@@ -536,11 +536,11 @@ int main(int argc, char** argv) {
 
             // jump to top/bottom of page
             case 'g':
-                new_date = find_closest_entry(cal_start, false, diary_dir, diary_dir_size);
+                new_date = find_closest_entry(cal_start, false, CONFIG.diary_dir, diary_dir_size);
                 mv_valid = go_to(cal, aside, mktime(&new_date), &pad_pos);
                 break;
             case 'G':
-                new_date = find_closest_entry(cal_end, true, diary_dir, diary_dir_size);
+                new_date = find_closest_entry(cal_end, true, CONFIG.diary_dir, diary_dir_size);
                 mv_valid = go_to(cal, aside, mktime(&new_date), &pad_pos);
                 break;
 
