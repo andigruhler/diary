@@ -70,3 +70,22 @@ Note: for *BSD users run gmake.
    By default this will copy the binary to /usr/local/bin. To use a different
    path prefix, type `sudo make PREFIX=/usr install` to use /usr/bin for example.
    You can uninstall diary with `sudo make uninstall`.
+
+## Configuration File
+
+(version `master`)
+
+The [`diary.cfg`](./diary.cfg) configuration file can optionally be used to persist diary configuration. To install the sample from this repository:
+```bash
+mkdir -p ~/.config/diary/
+cp diary.cfg ~/.config/diary/
+```
+
+The file `~/.config/diary/diary.cfg` should adhere to a basic `key = value` format. Lines can be commented with the special characters `#` or `;`. The following configuration keys are currently supported:
+
+| Command Line Option | Config Key | Example Config Value | Default Config Value | Description |
+| --- | --- | --- | --- | --- |
+| `--dir`, `-d`, or first non-option argument | `diary_dir` | ~/diary | n/a | Diary directory. Path that holds the journal text files. |
+| n/a | `year_range` | 10 | 1 | Number of years to show before/after todays date |
+| n/a | `first_weekday` | 0 | 1 | First weekday, `0` = Sunday, `1` = Monday, ..., `6` = Saturday. Use `0` to display week beginning at Sunday ("S-M-T-W-T-F-S"), or `1` for "M-T-W-T-F-S-S" (default) |
+| n/a | `date_fmt` | %d_%b_%y | %Y-%m-%d | Date format and file name for the files inside the `diary_dir`. For the format specifiers, see [`man strftime`](https://man7.org/linux/man-pages/man3/strftime.3.html). |

@@ -5,8 +5,10 @@
 #ifdef __MACH__
 	#include <CoreFoundation/CoreFoundation.h>
 #endif
+#include <stdio.h>
 #include <stdint.h>
 #include <stdlib.h>
+#include <wordexp.h>
 #include <unistd.h>
 #include <getopt.h>
 #include <string.h>
@@ -17,8 +19,8 @@
 #include <locale.h>
 #include <langinfo.h>
 
+#define CONFIG_FILE_PATH "~/.config/diary/diary.cfg"
 #define DIARY_VERSION "0.4"
-#define YEAR_RANGE 1
 #define CAL_WIDTH 21
 #define ASIDE_WIDTH 4
 #define MAX_MONTH_HEIGHT 6
@@ -37,5 +39,23 @@ void edit_cmd(const char* dir, size_t dir_size, const struct tm* date, char** rc
 bool date_has_entry(const char* dir, size_t dir_size, const struct tm* i);
 void get_date_str(const struct tm* date, char* date_str, size_t date_str_size);
 void fpath(const char* dir, size_t dir_size, const struct tm* date, char** rpath, size_t rpath_size);
+
+typedef struct
+{
+    // Path that holds the journal text files
+    char* diary_dir;
+    // Number of years to show before/after todays date
+    int year_range;
+    // 0 = Sunday, 1 = Monday, ..., 6 = Saturday
+    int first_weekday;
+    // 2020-12-31
+	char* date_fmt;
+} config;
+
+config CONFIG = {
+    .year_range = 1,
+    .first_weekday = 1,
+    .date_fmt = "%Y-%m-%d"
+};
 
 #endif
