@@ -351,10 +351,18 @@ void usage() {
 int main(int argc, char** argv) {
     setlocale(LC_ALL, "");
     char* env_var;
+    char* config_home;
+    char* config_file_path;
     chtype atrs;
 
     // the diary directory defaults to the diary_dir specified in the config file
-    read_config(CONFIG_FILE_PATH);
+    config_home = getenv("XDG_CONFIG_HOME");
+    if (config_home == NULL) config_home = XDG_CONFIG_HOME_FALLBACK;
+    // concat config home with the file path to the config file
+    config_file_path = (char *) calloc(strlen(config_home) + strlen(CONFIG_FILE_PATH) + 1, sizeof(char));
+    sprintf(config_file_path, "%s/%s", config_home, CONFIG_FILE_PATH);
+    // read config from config file path
+    read_config(config_file_path);
 
     env_var = getenv("DIARY_DIR");
     if (env_var != NULL) {

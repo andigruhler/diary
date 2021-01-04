@@ -19,7 +19,8 @@
 #include <locale.h>
 #include <langinfo.h>
 
-#define CONFIG_FILE_PATH "~/.config/diary/diary.cfg"
+#define XDG_CONFIG_HOME_FALLBACK "~/.config"
+#define CONFIG_FILE_PATH "diary/diary.cfg"
 #define DIARY_VERSION "0.4"
 #define CAL_WIDTH 21
 #define ASIDE_WIDTH 4
