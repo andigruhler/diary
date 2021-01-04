@@ -50,7 +50,7 @@ typedef struct
     // 0 = Sunday, 1 = Monday, ..., 6 = Saturday
     int first_weekday;
     // 2020-12-31
-	char* date_fmt;
+    char* date_fmt;
 } config;
 
 config CONFIG = {
