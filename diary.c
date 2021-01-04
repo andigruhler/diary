@@ -340,9 +340,12 @@ void usage() {
   printf("Edit journal entries from the command line\n");
   printf("\n");
   printf("Options:\n");
-  printf("  -v, --version       : Print diary version\n");
-  printf("  -h, --help          : Show diary help text\n");
-  printf("  -d, --dir DIARY_DIR : Diary storage directory (DIARY_DIR)\n");
+  printf("  -v, --version                 : Print diary version\n");
+  printf("  -h, --help                    : Show diary help text\n");
+  printf("  -d, --dir           DIARY_DIR : Diary storage directory (DIARY_DIR)\n");
+  printf("  -r, --year_range    RANGE     : Number of years to show before/after todays date\n");
+  printf("  -w, --first_weekday DAY       : First day of the week, 0 = Sun, 1 = Mon, ..., 6 = Sat\n");
+  printf("  -f, --date_fmt      FMT       : Date and file format, change with care\n");
   printf("\n");
   printf("Full docs and keyboard shortcuts: DIARY(1)\n");
   printf("or online via: <https://github.com/in0rdr/diary>\n");
@@ -354,92 +357,6 @@ int main(int argc, char** argv) {
     char* config_home;
     char* config_file_path;
     chtype atrs;
-
-    // the diary directory defaults to the diary_dir specified in the config file
-    config_home = getenv("XDG_CONFIG_HOME");
-    if (config_home == NULL) config_home = XDG_CONFIG_HOME_FALLBACK;
-    // concat config home with the file path to the config file
-    config_file_path = (char *) calloc(strlen(config_home) + strlen(CONFIG_FILE_PATH) + 1, sizeof(char));
-    sprintf(config_file_path, "%s/%s", config_home, CONFIG_FILE_PATH);
-    // read config from config file path
-    read_config(config_file_path);
-
-    env_var = getenv("DIARY_DIR");
-    if (env_var != NULL) {
-        // if available, overwrite the diary directory with the environment variable
-        CONFIG.diary_dir = (char *) calloc(strlen(env_var) + 1, sizeof(char));
-        strcpy(CONFIG.diary_dir, env_var);
-    }
-
-    // get the diary directory via argument, this takes precedence over env/config
-    if (argc < 2) {
-        if (CONFIG.diary_dir == NULL) {
-            fprintf(stderr, "The diary directory must be provided as (non-option) arg, `--dir` arg,\n"
-                            "or in the DIARY_DIR environment variable, see `diary --help` or DIARY(1)\n");
-            return 1;
-        }
-    } else {
-        int option_char;
-        int option_index = 0;
-
-        // define options, see GETOPT(3)
-        static const struct option long_options[] = {
-            { "version", no_argument,       0, 'v' },
-            { "help",    no_argument,       0, 'h' },
-            { "dir",     required_argument, 0, 'd' },
-            { 0,         0,                 0,  0  }
-        };
-
-        // read option characters
-        while (1) {
-            option_char = getopt_long(argc, argv, "vhd:", long_options, &option_index);
-
-            if (option_char == -1) {
-                break;
-            }
-
-            switch (option_char) {
-                case 'v':
-                    // show program version
-                    printf("v%s\n", DIARY_VERSION);
-                    return 0;
-                    break;
-                case 'h':
-                    // show help text
-                    // printf("see man(1) diary\n");
-                    usage();
-                    return 0;
-                    break;
-                case 'd':
-                    // set diary directory from option character
-                    CONFIG.diary_dir = (char *) calloc(strlen(optarg) + 1, sizeof(char));
-                    strcpy(CONFIG.diary_dir, optarg);
-                    break;
-                default:
-                    printf("?? getopt returned character code 0%o ??\n", option_char);
-            }
-        }
-
-        if (optind < argc) {
-            // set diary directory from first non-option argv-element,
-            // required for backwarad compatibility with diary <= 0.4
-            CONFIG.diary_dir = (char *) calloc(strlen(argv[optind]) + 1, sizeof(char));
-            strcpy(CONFIG.diary_dir, argv[optind]);
-        }
-    }
-
-    // check if that directory exists
-    DIR* diary_dir_ptr = opendir(CONFIG.diary_dir);
-    if (diary_dir_ptr) {
-        // directory exists, continue
-        closedir(diary_dir_ptr);
-    } else if (errno == ENOENT) {
-        fprintf(stderr, "The directory '%s' does not exist\n", CONFIG.diary_dir);
-        return 2;
-    } else {
-        fprintf(stderr, "The directory '%s' could not be opened\n", CONFIG.diary_dir);
-        return 1;
-    }
 
     #ifdef __GNU_LIBRARY__
         // references: locale(5) and util-linux's cal.c
@@ -471,6 +388,109 @@ int main(int argc, char** argv) {
             CONFIG.first_weekday = (base.tm_wday + first_day_of_week - 1) % 7;
         #endif
     #endif
+
+    // the diary directory defaults to the diary_dir specified in the config file
+    config_home = getenv("XDG_CONFIG_HOME");
+    if (config_home == NULL) config_home = XDG_CONFIG_HOME_FALLBACK;
+    // concat config home with the file path to the config file
+    config_file_path = (char *) calloc(strlen(config_home) + strlen(CONFIG_FILE_PATH) + 1, sizeof(char));
+    sprintf(config_file_path, "%s/%s", config_home, CONFIG_FILE_PATH);
+    // read config from config file path
+    read_config(config_file_path);
+
+    env_var = getenv("DIARY_DIR");
+    if (env_var != NULL) {
+        // if available, overwrite the diary directory with the environment variable
+        CONFIG.diary_dir = (char *) calloc(strlen(env_var) + 1, sizeof(char));
+        strcpy(CONFIG.diary_dir, env_var);
+    }
+
+    // get the diary directory via argument, this takes precedence over env/config
+    if (argc < 2) {
+        if (CONFIG.diary_dir == NULL) {
+            fprintf(stderr, "The diary directory must be provided as (non-option) arg, `--dir` arg,\n"
+                            "or in the DIARY_DIR environment variable, see `diary --help` or DIARY(1)\n");
+            return 1;
+        }
+    } else {
+        int option_char;
+        int option_index = 0;
+
+        // define options, see GETOPT(3)
+        static const struct option long_options[] = {
+            { "version",       no_argument,       0, 'v' },
+            { "help",          no_argument,       0, 'h' },
+            { "dir",           required_argument, 0, 'd' },
+            { "year_range",    required_argument, 0, 'r' },
+            { "first_weekday", required_argument, 0, 'w' },
+            { "date_fmt",      required_argument, 0, 'f' },
+            { 0,               0,                 0,  0  }
+        };
+
+        // read option characters
+        while (1) {
+            option_char = getopt_long(argc, argv, "vhd:r:w:f:", long_options, &option_index);
+
+            if (option_char == -1) {
+                break;
+            }
+
+            switch (option_char) {
+                case 'v':
+                    // show program version
+                    printf("v%s\n", DIARY_VERSION);
+                    return 0;
+                    break;
+                case 'h':
+                    // show help text
+                    // printf("see man(1) diary\n");
+                    usage();
+                    return 0;
+                    break;
+                case 'd':
+                    // set diary directory from option character
+                    CONFIG.diary_dir = (char *) calloc(strlen(optarg) + 1, sizeof(char));
+                    strcpy(CONFIG.diary_dir, optarg);
+                    break;
+                case 'r':
+                    // set year range from option character
+                    CONFIG.year_range = atoi(optarg);
+                    break;
+                case 'w':
+                    // set first week day from option character
+                    fprintf(stderr, "%i\n", atoi(optarg));
+                    CONFIG.first_weekday = atoi(optarg);
+                    break;
+                case 'f':
+                    // set date format from option character
+                    CONFIG.date_fmt = (char *) calloc(strlen(optarg) + 1, sizeof(char));
+                    strcpy(CONFIG.date_fmt, optarg);
+                    break;
+                default:
+                    printf("?? getopt returned character code 0%o ??\n", option_char);
+            }
+        }
+
+        if (optind < argc) {
+            // set diary directory from first non-option argv-element,
+            // required for backwarad compatibility with diary <= 0.4
+            CONFIG.diary_dir = (char *) calloc(strlen(argv[optind]) + 1, sizeof(char));
+            strcpy(CONFIG.diary_dir, argv[optind]);
+        }
+    }
+
+    // check if that directory exists
+    DIR* diary_dir_ptr = opendir(CONFIG.diary_dir);
+    if (diary_dir_ptr) {
+        // directory exists, continue
+        closedir(diary_dir_ptr);
+    } else if (errno == ENOENT) {
+        fprintf(stderr, "The directory '%s' does not exist\n", CONFIG.diary_dir);
+        return 2;
+    } else {
+        fprintf(stderr, "The directory '%s' could not be opened\n", CONFIG.diary_dir);
+        return 1;
+    }
 
     setup_cal_timeframe();
 
