@@ -29,6 +29,15 @@ If the argument \fIDIRECTORY\fR is given, diary files are read from and
 stored to that directory, ignoring the DIARY_DIR environment variable or
 any '-d' or '--dir' options.
 
+
+.SH FILES
+.TP
+.I ${PREFIX:-/usr/local/bin}/diary
+The diary binary
+.TP
+.I ${XDG_CONFIG_HOME:-~/.config}/diary/diary.cfg
+An optional diary configuration file
+
 .SH NAVIGATION
 Navigation is done using the following vim-inspired keyboard shortcuts:
 
