@@ -316,9 +316,13 @@ bool read_config(const char* file_path)
 
         if (sscanf(line, "%s = %s", key_buf, value_buf) == 2) {
             if (strcmp("diary_dir", key_buf) == 0) {
-                //  set diary directory from config file
-                CONFIG.diary_dir = (char *) calloc(strlen(value_buf) + 1, sizeof(char));
-                strcpy(CONFIG.diary_dir, value_buf);
+                wordexp_t diary_dir_wordexp;
+                if ( wordexp( value_buf, &diary_dir_wordexp, 0 ) == 0) {
+                    // set expanded diary directory path from config file
+                    CONFIG.diary_dir = (char *) calloc(strlen(diary_dir_wordexp.we_wordv[0]) + 1, sizeof(char));
+                    strcpy(CONFIG.diary_dir, diary_dir_wordexp.we_wordv[0]);
+                }
+                wordfree(&diary_dir_wordexp);
             } else if (strcmp("year_range", key_buf) == 0) {
                 CONFIG.year_range = atoi(value_buf);
             } else if (strcmp("first_weekday", key_buf) == 0) {
