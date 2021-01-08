@@ -347,7 +347,7 @@ void usage() {
   printf("  -v, --version                 : Print diary version\n");
   printf("  -h, --help                    : Show diary help text\n");
   printf("  -d, --dir           DIARY_DIR : Diary storage directory DIARY_DIR\n");
-  printf("  -r, --year_range    RANGE     : RANGE is the number of years to show before/after todays date\n");
+  printf("  -r, --year_range    RANGE     : RANGE is the number of years to show before/after today's date\n");
   printf("  -w, --first_weekday DAY       : First day of the week, 0 = Sun, 1 = Mon, ..., 6 = Sat\n");
   printf("  -f, --date_fmt      FMT       : Date and file format, change with care\n");
   printf("\n");
