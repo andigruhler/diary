@@ -84,6 +84,6 @@ The file `~/.config/diary/diary.cfg` should adhere to a basic `key = value` form
 | Command Line Option | Config Key | Example Config Value | Default Config Value | Description |
 | --- | --- | --- | --- | --- |
 | `--dir`, `-d`, or first non-option argument | `dir` | ~/diary | n/a | Diary directory. Path that holds the journal text files. |
-| `--year_range` or `-r` | `year_range` | 10 | 1 | Number of years to show before/after todays date |
+| `--range` or `-r` | `range` | 10 | 1 | Number of years to show before/after todays date |
 | `--first_weekday` or `-w` | `first_weekday` | 0 | 1 | First weekday, `0` = Sunday, `1` = Monday, ..., `6` = Saturday. Use `0` to display week beginning at Sunday ("S-M-T-W-T-F-S"), or `1` for "M-T-W-T-F-S-S" (default) |
 | `--date_fmt` or `-f` | `date_fmt` | %d_%b_%y | %Y-%m-%d | Date format and file name for the files inside the `dir`. For the format specifiers, see [`man strftime`](https://man7.org/linux/man-pages/man3/strftime.3.html). Be careful: If you change this, you might no longer find your existing diary entries, because the diary assumes to find the journal files under another file name. Hence, a change in FMT shows an empty diary, at first. Rename all files in the DIARY_DIR to migrate to a new FMT. |

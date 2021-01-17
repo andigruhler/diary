@@ -46,7 +46,7 @@ typedef struct
     // Path that holds the journal text files
     char* dir;
     // Number of years to show before/after todays date
-    int year_range;
+    int range;
     // 0 = Sunday, 1 = Monday, ..., 6 = Saturday
     int first_weekday;
     // 2020-12-31
@@ -54,7 +54,7 @@ typedef struct
 } config;
 
 config CONFIG = {
-    .year_range = 1,
+    .range = 1,
     .first_weekday = 1,
     .date_fmt = "%Y-%m-%d"
 };

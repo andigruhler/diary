@@ -19,7 +19,7 @@ void setup_cal_timeframe()
     curs_date = today;
 
     cal_start = today;
-    cal_start.tm_year -= CONFIG.year_range;
+    cal_start.tm_year -= CONFIG.range;
     cal_start.tm_mon = 0;
     cal_start.tm_mday = 1;
     mktime(&cal_start);
@@ -33,7 +33,7 @@ void setup_cal_timeframe()
     }
 
     cal_end = today;
-    cal_end.tm_year += CONFIG.year_range;
+    cal_end.tm_year += CONFIG.range;
     cal_end.tm_mon = 11;
     cal_end.tm_mday = 31;
     mktime(&cal_end);
@@ -323,8 +323,8 @@ bool read_config(const char* file_path)
                     strcpy(CONFIG.dir, diary_dir_wordexp.we_wordv[0]);
                 }
                 wordfree(&diary_dir_wordexp);
-            } else if (strcmp("year_range", key_buf) == 0) {
-                CONFIG.year_range = atoi(value_buf);
+            } else if (strcmp("range", key_buf) == 0) {
+                CONFIG.range = atoi(value_buf);
             } else if (strcmp("first_weekday", key_buf) == 0) {
                 CONFIG.first_weekday = atoi(value_buf);
             } else if (strcmp("date_fmt", key_buf) == 0) {
@@ -347,7 +347,7 @@ void usage() {
   printf("  -v, --version                 : Print diary version\n");
   printf("  -h, --help                    : Show diary help text\n");
   printf("  -d, --dir           DIARY_DIR : Diary storage directory DIARY_DIR\n");
-  printf("  -r, --year_range    RANGE     : RANGE is the number of years to show before/after today's date\n");
+  printf("  -r, --range         RANGE     : RANGE is the number of years to show before/after today's date\n");
   printf("  -w, --first_weekday DAY       : First day of the week, 0 = Sun, 1 = Mon, ..., 6 = Sat\n");
   printf("  -f, --date_fmt      FMT       : Date and file format, change with care\n");
   printf("\n");
@@ -425,7 +425,7 @@ int main(int argc, char** argv) {
             { "version",       no_argument,       0, 'v' },
             { "help",          no_argument,       0, 'h' },
             { "dir",           required_argument, 0, 'd' },
-            { "year_range",    required_argument, 0, 'r' },
+            { "range",         required_argument, 0, 'r' },
             { "first_weekday", required_argument, 0, 'w' },
             { "date_fmt",      required_argument, 0, 'f' },
             { 0,               0,                 0,  0  }
@@ -458,7 +458,7 @@ int main(int argc, char** argv) {
                     break;
                 case 'r':
                     // set year range from option character
-                    CONFIG.year_range = atoi(optarg);
+                    CONFIG.range = atoi(optarg);
                     break;
                 case 'w':
                     // set first week day from option character
@@ -508,8 +508,8 @@ int main(int argc, char** argv) {
     WINDOW* wdays = newwin(1, 3 * 7, 0, ASIDE_WIDTH);
     draw_wdays(wdays);
 
-    WINDOW* aside = newpad((CONFIG.year_range * 2 + 1) * 12 * MAX_MONTH_HEIGHT, ASIDE_WIDTH);
-    WINDOW* cal = newpad((CONFIG.year_range * 2 + 1) * 12 * MAX_MONTH_HEIGHT, CAL_WIDTH);
+    WINDOW* aside = newpad((CONFIG.range * 2 + 1) * 12 * MAX_MONTH_HEIGHT, ASIDE_WIDTH);
+    WINDOW* cal = newpad((CONFIG.range * 2 + 1) * 12 * MAX_MONTH_HEIGHT, CAL_WIDTH);
     keypad(cal, TRUE);
     draw_calendar(cal, aside, CONFIG.dir, strlen(CONFIG.dir));
 
