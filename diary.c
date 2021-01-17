@@ -159,21 +159,13 @@ void display_entry(const char* dir, size_t dir_size, const struct tm* date, WIND
 /* Writes edit command for 'date' entry to 'rcmd'. '*rcmd' is NULL on error. */
 void edit_cmd(const char* dir, size_t dir_size, const struct tm* date, char** rcmd, size_t rcmd_size)
 {
-    // get editor from environment
-    char* editor = getenv("EDITOR");
-    if (editor == NULL) {
-        fprintf(stderr, "'EDITOR' environment variable not set");
-        *rcmd = NULL;
-        return;
-    }
-
     // set the edit command to env editor
-    if (strlen(editor) + 2 > rcmd_size) {
+    if (strlen(CONFIG.editor) + 2 > rcmd_size) {
         fprintf(stderr, "Binary path of default editor too long");
         *rcmd = NULL;
         return;
     }
-    strcpy(*rcmd, editor);
+    strcpy(*rcmd, CONFIG.editor);
     strcat(*rcmd, " ");
 
     // get path of entry
@@ -330,6 +322,9 @@ bool read_config(const char* file_path)
             } else if (strcmp("fmt", key_buf) == 0) {
                 CONFIG.fmt = (char *) malloc(strlen(value_buf) + 1 * sizeof(char));
                 strcpy(CONFIG.fmt, value_buf);
+            } else if (strcmp("editor", key_buf) == 0) {
+                CONFIG.editor = (char *) malloc(strlen(value_buf) + 1 * sizeof(char));
+                strcpy(CONFIG.editor, value_buf);
             }
         }
     }
@@ -350,6 +345,7 @@ void usage() {
   printf("  -r, --range         RANGE     : RANGE is the number of years to show before/after today's date\n");
   printf("  -w, --weekday       DAY       : First day of the week, 0 = Sun, 1 = Mon, ..., 6 = Sat\n");
   printf("  -f, --fmt           FMT       : Date and file format, change with care\n");
+  printf("  -e, --editor        EDITOR    : Editor to open journal files with\n");
   printf("\n");
   printf("Full docs and keyboard shortcuts: DIARY(1)\n");
   printf("or online via: <https://github.com/in0rdr/diary>\n");
@@ -402,11 +398,20 @@ int main(int argc, char** argv) {
     // read config from config file path
     read_config(config_file_path);
 
+    // get diary directory from environment
     env_var = getenv("DIARY_DIR");
     if (env_var != NULL) {
         // if available, overwrite the diary directory with the environment variable
         CONFIG.dir = (char *) calloc(strlen(env_var) + 1, sizeof(char));
         strcpy(CONFIG.dir, env_var);
+    }
+
+    // get editor from environment
+    env_var = getenv("EDITOR");
+    if (env_var != NULL) {
+        // if available, overwrite the editor with the environments EDITOR
+        CONFIG.editor = (char *) calloc(strlen(env_var) + 1, sizeof(char));
+        strcpy(CONFIG.editor, env_var);
     }
 
     // get the diary directory via argument, this takes precedence over env/config
@@ -428,12 +433,13 @@ int main(int argc, char** argv) {
             { "range",         required_argument, 0, 'r' },
             { "weekday",       required_argument, 0, 'w' },
             { "fmt",           required_argument, 0, 'f' },
+            { "editor",        required_argument, 0, 'e' },
             { 0,               0,                 0,  0  }
         };
 
         // read option characters
         while (1) {
-            option_char = getopt_long(argc, argv, "vhd:r:w:f:", long_options, &option_index);
+            option_char = getopt_long(argc, argv, "vhd:r:w:f:e:", long_options, &option_index);
 
             if (option_char == -1) {
                 break;
@@ -469,6 +475,11 @@ int main(int argc, char** argv) {
                     // set date format from option character
                     CONFIG.fmt = (char *) calloc(strlen(optarg) + 1, sizeof(char));
                     strcpy(CONFIG.fmt, optarg);
+                    break;
+                case 'e':
+                    // set default editor from option character
+                    CONFIG.editor = (char *) calloc(strlen(optarg) + 1, sizeof(char));
+                    strcpy(CONFIG.editor, optarg);
                     break;
                 default:
                     printf("?? getopt returned character code 0%o ??\n", option_char);

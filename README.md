@@ -17,7 +17,7 @@ This is a text based diary, inspired by [khal](https://github.com/pimutils/khal)
 
    Instead of this, you can also set the environment variable `DIARY_DIR`
    to the desired directory. If both an argument and the environment
-   variable are given, the argument takes precedence.
+   variable are given, the argument takes precedence (see [Variable Precedence Rules](#precedence_rules)).
 
    The text files in this folder will be named 'yyyy-mm-dd'.
 
@@ -83,7 +83,20 @@ The file `~/.config/diary/diary.cfg` should adhere to a basic `key = value` form
 
 | Command Line Option | Config Key | Example Config Value | Default Config Value | Description |
 | --- | --- | --- | --- | --- |
-| `--dir`, `-d`, or first non-option argument | `dir` | ~/diary | n/a | Diary directory. Path that holds the journal text files. |
+| `--dir`, `-d`, or first non-option argument | `dir` | ~/diary | n/a | Diary directory. Path that holds the journal text files. If unset, defaults to environment variable `$DIARY_DIR`.|
 | `--range` or `-r` | `range` | 10 | 1 | Number of years to show before/after todays date |
 | `--weekday` or `-w` | `weekday` | 0 | 1 | First weekday, `0` = Sunday, `1` = Monday, ..., `6` = Saturday. Use `0` to display week beginning at Sunday ("S-M-T-W-T-F-S"), or `1` for "M-T-W-T-F-S-S" (default) |
 | `--fmt` or `-f` | `fmt` | %d_%b_%y | %Y-%m-%d | Date format and file name for the files inside the `dir`. For the format specifiers, see [`man strftime`](https://man7.org/linux/man-pages/man3/strftime.3.html). Be careful: If you change this, you might no longer find your existing diary entries, because the diary assumes to find the journal files under another file name. Hence, a change in FMT shows an empty diary, at first. Rename all files in the DIARY_DIR to migrate to a new FMT. |
+| `--editor` or `-e` | `editor` | "vim" | "" | Editor to open journal files with. If unset, defaults to environment variable `$EDITOR`. If no editor is provided, the diary is opened read-only. |
+
+## Precedence Rules
+<a name="precedence_rules"></a>
+
+The variable defaults, for instance, for the variables `EDITOR` and `DIARY_DIR`, are populated with values in the following order:
+1. No default for `DIARY_DIR`. Defaults for `range`, `weekday`, `fmt` and `editor` are provided in [diary.h](diary.h)
+* If `EDITOR` is unset and no editor is provided in the config file or via the `-e` option, the diary works read-only. Journal files cannot be opened.
+* If `DIARY_DIR` is not provided, the diary won't open.
+2. **Config file** (empty default for `CONFIG.editor`, no default for `CONFIG.dir`)
+3. **Environment** variables `$DIARY_DIR` / `$EDITOR`
+4. **Option arguments** `-d` / `-e`
+5. First non-option argument is interpreted as `DIARY_DIR`

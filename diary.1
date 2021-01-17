@@ -36,6 +36,9 @@ applied to newly saved entries. Existing entries with the old FMT are not
 automatically migrated to the new FMT and do not show up with a new FMT
 specifier. Consequently, a change in FMT shows an empty diary, at first.
 Rename all files in the DIARY_DIR to migrate to a new FMT.
+.TP
+\fB\-e\fR, \fB\-\-editor\fR=\fI\,EDITOR\/\fR
+EDITOR is the text editor used for opening the journal files.
 
 .SH ENVIRONMENT
 
@@ -83,7 +86,9 @@ Install an example config file with defaults:
  # 0 = Sunday, 1 = Monday, ..., 6 = Saturday
  weekday = 1
  # Date and file format, change with care
- fmt = %Y-%m-%d' | sed 's/^[[:space:]]*//' > ~/.config/diary/diary.cfg
+ fmt = %Y-%m-%d
+ # Editor to open journal files with
+ editor = ""' | sed 's/^[[:space:]]*//' > ~/.config/diary/diary.cfg
 .fi
 
 Use characters '#' or ';' for commenting lines.
@@ -116,6 +121,40 @@ t         | jump to today
 s         | jump to specific day
 .TE
 
+.SH PRECEDENCE RULES
+
+The variable defaults, for instance, for the variables 'EDITOR' and 'DIARY_DIR', are populated with values in the following order:
+
+.TP
+1.
+No default for 'DIARY_DIR'. Defaults for 'range', 'weekday', 'fmt' and 'editor' are provided in 'diary.h'. If 'EDITOR' is unset and no editor is provided in the config file or via the '-e' option, the
+.B
+diary
+works read-only. Journal files cannot be opened. If 'DIARY_DIR' is not provided, the
+.B
+diary
+won't open.
+.TP
+2.
+.B
+Config file
+(empty default for 'CONFIG.editor', no default for 'CONFIG.dir')
+.TP
+3.
+.B
+Environment
+variables '$DIARY_DIR' / '$EDITOR'
+.TP
+4.
+.B
+Option
+arguments, see section
+.B
+OPTIONS
+'-d' / '-e'
+.TP
+5.
+First non-option argument \fIDIRECTORY\fR is interpreted as 'DIARY_DIR'
 
 .SH DEVELOPMENT
 All source code is available in this github repository:

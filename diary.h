@@ -51,12 +51,15 @@ typedef struct
     int weekday;
     // 2020-12-31
     char* fmt;
+    // Editor to open journal files with
+    char* editor;
 } config;
 
 config CONFIG = {
     .range = 1,
     .weekday = 1,
-    .fmt = "%Y-%m-%d"
+    .fmt = "%Y-%m-%d",
+    .editor = ""
 };
 
 #endif
