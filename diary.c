@@ -315,12 +315,12 @@ bool read_config(const char* file_path)
         if (*line == '#' || *line == ';') continue;
 
         if (sscanf(line, "%s = %s", key_buf, value_buf) == 2) {
-            if (strcmp("diary_dir", key_buf) == 0) {
+            if (strcmp("dir", key_buf) == 0) {
                 wordexp_t diary_dir_wordexp;
                 if ( wordexp( value_buf, &diary_dir_wordexp, 0 ) == 0) {
                     // set expanded diary directory path from config file
-                    CONFIG.diary_dir = (char *) calloc(strlen(diary_dir_wordexp.we_wordv[0]) + 1, sizeof(char));
-                    strcpy(CONFIG.diary_dir, diary_dir_wordexp.we_wordv[0]);
+                    CONFIG.dir = (char *) calloc(strlen(diary_dir_wordexp.we_wordv[0]) + 1, sizeof(char));
+                    strcpy(CONFIG.dir, diary_dir_wordexp.we_wordv[0]);
                 }
                 wordfree(&diary_dir_wordexp);
             } else if (strcmp("year_range", key_buf) == 0) {
@@ -405,13 +405,13 @@ int main(int argc, char** argv) {
     env_var = getenv("DIARY_DIR");
     if (env_var != NULL) {
         // if available, overwrite the diary directory with the environment variable
-        CONFIG.diary_dir = (char *) calloc(strlen(env_var) + 1, sizeof(char));
-        strcpy(CONFIG.diary_dir, env_var);
+        CONFIG.dir = (char *) calloc(strlen(env_var) + 1, sizeof(char));
+        strcpy(CONFIG.dir, env_var);
     }
 
     // get the diary directory via argument, this takes precedence over env/config
     if (argc < 2) {
-        if (CONFIG.diary_dir == NULL) {
+        if (CONFIG.dir == NULL) {
             fprintf(stderr, "The diary directory must be provided as (non-option) arg, `--dir` arg,\n"
                             "or in the DIARY_DIR environment variable, see `diary --help` or DIARY(1)\n");
             return 1;
@@ -453,8 +453,8 @@ int main(int argc, char** argv) {
                     break;
                 case 'd':
                     // set diary directory from option character
-                    CONFIG.diary_dir = (char *) calloc(strlen(optarg) + 1, sizeof(char));
-                    strcpy(CONFIG.diary_dir, optarg);
+                    CONFIG.dir = (char *) calloc(strlen(optarg) + 1, sizeof(char));
+                    strcpy(CONFIG.dir, optarg);
                     break;
                 case 'r':
                     // set year range from option character
@@ -478,21 +478,21 @@ int main(int argc, char** argv) {
         if (optind < argc) {
             // set diary directory from first non-option argv-element,
             // required for backwarad compatibility with diary <= 0.4
-            CONFIG.diary_dir = (char *) calloc(strlen(argv[optind]) + 1, sizeof(char));
-            strcpy(CONFIG.diary_dir, argv[optind]);
+            CONFIG.dir = (char *) calloc(strlen(argv[optind]) + 1, sizeof(char));
+            strcpy(CONFIG.dir, argv[optind]);
         }
     }
 
     // check if that directory exists
-    DIR* diary_dir_ptr = opendir(CONFIG.diary_dir);
+    DIR* diary_dir_ptr = opendir(CONFIG.dir);
     if (diary_dir_ptr) {
         // directory exists, continue
         closedir(diary_dir_ptr);
     } else if (errno == ENOENT) {
-        fprintf(stderr, "The directory '%s' does not exist\n", CONFIG.diary_dir);
+        fprintf(stderr, "The directory '%s' does not exist\n", CONFIG.dir);
         return 2;
     } else {
-        fprintf(stderr, "The directory '%s' could not be opened\n", CONFIG.diary_dir);
+        fprintf(stderr, "The directory '%s' could not be opened\n", CONFIG.dir);
         return 1;
     }
 
@@ -511,7 +511,7 @@ int main(int argc, char** argv) {
     WINDOW* aside = newpad((CONFIG.year_range * 2 + 1) * 12 * MAX_MONTH_HEIGHT, ASIDE_WIDTH);
     WINDOW* cal = newpad((CONFIG.year_range * 2 + 1) * 12 * MAX_MONTH_HEIGHT, CAL_WIDTH);
     keypad(cal, TRUE);
-    draw_calendar(cal, aside, CONFIG.diary_dir, strlen(CONFIG.diary_dir));
+    draw_calendar(cal, aside, CONFIG.dir, strlen(CONFIG.dir));
 
     int ch, conf_ch;
     int pad_pos = 0;
@@ -519,7 +519,7 @@ int main(int argc, char** argv) {
     struct tm new_date;
     int prev_width = COLS - ASIDE_WIDTH - CAL_WIDTH;
     int prev_height = LINES - 1;
-    size_t diary_dir_size = strlen(CONFIG.diary_dir);
+    size_t diary_dir_size = strlen(CONFIG.dir);
 
     bool mv_valid = go_to(cal, aside, raw_time, &pad_pos);
     // mark current day
@@ -528,7 +528,7 @@ int main(int argc, char** argv) {
     prefresh(cal, pad_pos, 0, 1, ASIDE_WIDTH, LINES - 1, ASIDE_WIDTH + CAL_WIDTH);
 
     WINDOW* prev = newwin(prev_height, prev_width, 1, ASIDE_WIDTH + CAL_WIDTH);
-    display_entry(CONFIG.diary_dir, diary_dir_size, &today, prev, prev_width);
+    display_entry(CONFIG.dir, diary_dir_size, &today, prev, prev_width);
 
 
     do {
@@ -541,7 +541,7 @@ int main(int argc, char** argv) {
         char pth[100];
         char* ppth = pth;
         char dstr[16];
-        edit_cmd(CONFIG.diary_dir, diary_dir_size, &new_date, &pecmd, sizeof ecmd);
+        edit_cmd(CONFIG.dir, diary_dir_size, &new_date, &pecmd, sizeof ecmd);
 
         switch(ch) {
             // basic movements
@@ -568,11 +568,11 @@ int main(int argc, char** argv) {
 
             // jump to top/bottom of page
             case 'g':
-                new_date = find_closest_entry(cal_start, false, CONFIG.diary_dir, diary_dir_size);
+                new_date = find_closest_entry(cal_start, false, CONFIG.dir, diary_dir_size);
                 mv_valid = go_to(cal, aside, mktime(&new_date), &pad_pos);
                 break;
             case 'G':
-                new_date = find_closest_entry(cal_end, true, CONFIG.diary_dir, diary_dir_size);
+                new_date = find_closest_entry(cal_end, true, CONFIG.dir, diary_dir_size);
                 mv_valid = go_to(cal, aside, mktime(&new_date), &pad_pos);
                 break;
 
@@ -613,9 +613,9 @@ int main(int argc, char** argv) {
             // delete entry
             case 'd':
             case 'x':
-                if (date_has_entry(CONFIG.diary_dir, diary_dir_size, &curs_date)) {
+                if (date_has_entry(CONFIG.dir, diary_dir_size, &curs_date)) {
                     // get file path of entry and delete entry
-                    fpath(CONFIG.diary_dir, diary_dir_size, &curs_date, &ppth, sizeof pth);
+                    fpath(CONFIG.dir, diary_dir_size, &curs_date, &ppth, sizeof pth);
                     if (ppth == NULL) {
                         fprintf(stderr, "Error retrieving file path for entry removal");
                         break;
@@ -663,7 +663,7 @@ int main(int argc, char** argv) {
                 keypad(cal, TRUE);
 
                 // mark newly created entry
-                if (date_has_entry(CONFIG.diary_dir, diary_dir_size, &curs_date)) {
+                if (date_has_entry(CONFIG.dir, diary_dir_size, &curs_date)) {
                     atrs = winch(cal) & A_ATTRIBUTES;
                     wchgat(cal, 2, atrs | A_BOLD, 0, NULL);
 
@@ -674,12 +674,12 @@ int main(int argc, char** argv) {
                 break;
             // Move to the previous diary entry
             case 'N':
-                new_date = find_closest_entry(new_date, true, CONFIG.diary_dir, diary_dir_size);
+                new_date = find_closest_entry(new_date, true, CONFIG.dir, diary_dir_size);
                 mv_valid = go_to(cal, aside, mktime(&new_date), &pad_pos);
                 break;
             // Move to the next diary entry
             case 'n':
-                new_date = find_closest_entry(new_date, false, CONFIG.diary_dir, diary_dir_size);
+                new_date = find_closest_entry(new_date, false, CONFIG.dir, diary_dir_size);
                 mv_valid = go_to(cal, aside, mktime(&new_date), &pad_pos);
                 break;
         }
@@ -692,7 +692,7 @@ int main(int argc, char** argv) {
             wresize(prev, prev_height, prev_width);
 
             // read the diary
-            display_entry(CONFIG.diary_dir, diary_dir_size, &curs_date, prev, prev_width);
+            display_entry(CONFIG.dir, diary_dir_size, &curs_date, prev, prev_width);
         }
     } while (ch != 'q');
 

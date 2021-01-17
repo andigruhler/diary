@@ -54,7 +54,7 @@ The program used to edit journal entries.
 
 If the argument \fIDIRECTORY\fR is given, diary files are read from and
 stored to that directory, ignoring the DIARY_DIR environment variable,
-any '-d'/'--dir' options or the 'diary_dir' set in the config file.
+any '-d'/'--dir' options or the 'dir' value set in the config file.
 
 .SH FILES
 .TP
@@ -77,7 +77,7 @@ Install an example config file with defaults:
 
 .nf
  $ echo '# Path that holds the journal text files
- #diary_dir = ~/diary
+ #dir = ~/diary
  # Number of years to show before/after todays date
  year_range = 1
  # 0 = Sunday, 1 = Monday, ..., 6 = Saturday

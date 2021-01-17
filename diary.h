@@ -44,7 +44,7 @@ void fpath(const char* dir, size_t dir_size, const struct tm* date, char** rpath
 typedef struct
 {
     // Path that holds the journal text files
-    char* diary_dir;
+    char* dir;
     // Number of years to show before/after todays date
     int year_range;
     // 0 = Sunday, 1 = Monday, ..., 6 = Saturday
