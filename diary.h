@@ -50,13 +50,13 @@ typedef struct
     // 0 = Sunday, 1 = Monday, ..., 6 = Saturday
     int weekday;
     // 2020-12-31
-    char* date_fmt;
+    char* fmt;
 } config;
 
 config CONFIG = {
     .range = 1,
     .weekday = 1,
-    .date_fmt = "%Y-%m-%d"
+    .fmt = "%Y-%m-%d"
 };
 
 #endif

@@ -29,7 +29,7 @@ RANGE is the number of years to show before/after todays date
 First day of the week. DAY is an integer in range (0..6),
 interpreted as 0 = Sun, 1 = Mon, ..., 6 = Sat
 .TP
-\fB\-f\fR, \fB\-\-date_fmt\fR=\fI\,FMT\/\fR
+\fB\-f\fR, \fB\-\-fmt\fR=\fI\,FMT\/\fR
 FMT is a custom date and file format. Change with care, because the diary
 reads and writes to files with file name FMT. The new FMT is only
 applied to newly saved entries. Existing entries with the old FMT are not
@@ -43,8 +43,8 @@ Rename all files in the DIARY_DIR to migrate to a new FMT.
 If this variable is set to a directory that can be opened,
 .B diary
 will use it to store diary files. Diary files are simple text files named
-after their date, formatted like FMT (see '-f'/'--date_fmt' options and
-'date_fmt' config key). The format defaults to "%Y-%m-%d", which is "YYYY-MM-DD"
+after their date, formatted like FMT (see '-f'/'--fmt' options and
+'fmt' config key). The format defaults to "%Y-%m-%d", which is "YYYY-MM-DD"
 (see man strftime). All other files different from FMT are ignored.
 
 .IP EDITOR
@@ -83,7 +83,7 @@ Install an example config file with defaults:
  # 0 = Sunday, 1 = Monday, ..., 6 = Saturday
  weekday = 1
  # Date and file format, change with care
- date_fmt = %Y-%m-%d' | sed 's/^[[:space:]]*//' > ~/.config/diary/diary.cfg
+ fmt = %Y-%m-%d' | sed 's/^[[:space:]]*//' > ~/.config/diary/diary.cfg
 .fi
 
 Use characters '#' or ';' for commenting lines.

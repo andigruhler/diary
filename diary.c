@@ -213,7 +213,7 @@ bool date_has_entry(const char* dir, size_t dir_size, const struct tm* i)
 
 void get_date_str(const struct tm* date, char* date_str, size_t date_str_size)
 {
-    strftime(date_str, date_str_size, CONFIG.date_fmt, date);
+    strftime(date_str, date_str_size, CONFIG.fmt, date);
 }
 
 /* Writes file path for 'date' entry to 'rpath'. '*rpath' is NULL on error. */
@@ -327,9 +327,9 @@ bool read_config(const char* file_path)
                 CONFIG.range = atoi(value_buf);
             } else if (strcmp("weekday", key_buf) == 0) {
                 CONFIG.weekday = atoi(value_buf);
-            } else if (strcmp("date_fmt", key_buf) == 0) {
-                CONFIG.date_fmt = (char *) malloc(strlen(value_buf) + 1 * sizeof(char));
-                strcpy(CONFIG.date_fmt, value_buf);
+            } else if (strcmp("fmt", key_buf) == 0) {
+                CONFIG.fmt = (char *) malloc(strlen(value_buf) + 1 * sizeof(char));
+                strcpy(CONFIG.fmt, value_buf);
             }
         }
     }
@@ -349,7 +349,7 @@ void usage() {
   printf("  -d, --dir           DIARY_DIR : Diary storage directory DIARY_DIR\n");
   printf("  -r, --range         RANGE     : RANGE is the number of years to show before/after today's date\n");
   printf("  -w, --weekday       DAY       : First day of the week, 0 = Sun, 1 = Mon, ..., 6 = Sat\n");
-  printf("  -f, --date_fmt      FMT       : Date and file format, change with care\n");
+  printf("  -f, --fmt           FMT       : Date and file format, change with care\n");
   printf("\n");
   printf("Full docs and keyboard shortcuts: DIARY(1)\n");
   printf("or online via: <https://github.com/in0rdr/diary>\n");
@@ -427,7 +427,7 @@ int main(int argc, char** argv) {
             { "dir",           required_argument, 0, 'd' },
             { "range",         required_argument, 0, 'r' },
             { "weekday",       required_argument, 0, 'w' },
-            { "date_fmt",      required_argument, 0, 'f' },
+            { "fmt",           required_argument, 0, 'f' },
             { 0,               0,                 0,  0  }
         };
 
@@ -467,8 +467,8 @@ int main(int argc, char** argv) {
                     break;
                 case 'f':
                     // set date format from option character
-                    CONFIG.date_fmt = (char *) calloc(strlen(optarg) + 1, sizeof(char));
-                    strcpy(CONFIG.date_fmt, optarg);
+                    CONFIG.fmt = (char *) calloc(strlen(optarg) + 1, sizeof(char));
+                    strcpy(CONFIG.fmt, optarg);
                     break;
                 default:
                     printf("?? getopt returned character code 0%o ??\n", option_char);
