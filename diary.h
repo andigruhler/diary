@@ -48,14 +48,14 @@ typedef struct
     // Number of years to show before/after todays date
     int range;
     // 0 = Sunday, 1 = Monday, ..., 6 = Saturday
-    int first_weekday;
+    int weekday;
     // 2020-12-31
     char* date_fmt;
 } config;
 
 config CONFIG = {
     .range = 1,
-    .first_weekday = 1,
+    .weekday = 1,
     .date_fmt = "%Y-%m-%d"
 };
 

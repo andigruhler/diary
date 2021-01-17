@@ -24,11 +24,11 @@ void setup_cal_timeframe()
     cal_start.tm_mday = 1;
     mktime(&cal_start);
 
-    if (cal_start.tm_wday != CONFIG.first_weekday) {
-        // adjust start date to first_weekday before 01.01
+    if (cal_start.tm_wday != CONFIG.weekday) {
+        // adjust start date to weekday before 01.01
         cal_start.tm_year--;
         cal_start.tm_mon = 11;
-        cal_start.tm_mday = 31 - (cal_start.tm_wday - CONFIG.first_weekday) + 1;
+        cal_start.tm_mday = 31 - (cal_start.tm_wday - CONFIG.weekday) + 1;
         mktime(&cal_start);
     }
 
@@ -42,7 +42,7 @@ void setup_cal_timeframe()
 void draw_wdays(WINDOW* head)
 {
     int i;
-    for (i = CONFIG.first_weekday; i < CONFIG.first_weekday + 7; i++) {
+    for (i = CONFIG.weekday; i < CONFIG.weekday + 7; i++) {
         waddstr(head, WEEKDAYS[i % 7]);
         waddch(head, ' ');
     }
@@ -325,8 +325,8 @@ bool read_config(const char* file_path)
                 wordfree(&diary_dir_wordexp);
             } else if (strcmp("range", key_buf) == 0) {
                 CONFIG.range = atoi(value_buf);
-            } else if (strcmp("first_weekday", key_buf) == 0) {
-                CONFIG.first_weekday = atoi(value_buf);
+            } else if (strcmp("weekday", key_buf) == 0) {
+                CONFIG.weekday = atoi(value_buf);
             } else if (strcmp("date_fmt", key_buf) == 0) {
                 CONFIG.date_fmt = (char *) malloc(strlen(value_buf) + 1 * sizeof(char));
                 strcpy(CONFIG.date_fmt, value_buf);
@@ -348,7 +348,7 @@ void usage() {
   printf("  -h, --help                    : Show diary help text\n");
   printf("  -d, --dir           DIARY_DIR : Diary storage directory DIARY_DIR\n");
   printf("  -r, --range         RANGE     : RANGE is the number of years to show before/after today's date\n");
-  printf("  -w, --first_weekday DAY       : First day of the week, 0 = Sun, 1 = Mon, ..., 6 = Sat\n");
+  printf("  -w, --weekday       DAY       : First day of the week, 0 = Sun, 1 = Mon, ..., 6 = Sat\n");
   printf("  -f, --date_fmt      FMT       : Date and file format, change with care\n");
   printf("\n");
   printf("Full docs and keyboard shortcuts: DIARY(1)\n");
@@ -381,15 +381,15 @@ int main(int argc, char** argv) {
             .tm_year = d / (100 * 100) - 1900
         };
         mktime(&base);
-        // first_weekday is base date's day of the week offset by (_NL_TIME_FIRST_WEEKDAY - 1)
+        // weekday is base date's day of the week offset by (_NL_TIME_FIRST_WEEKDAY - 1)
         #ifdef __linux__
-            CONFIG.first_weekday = (base.tm_wday + *nl_langinfo(_NL_TIME_FIRST_WEEKDAY) - 1) % 7;
+            CONFIG.weekday = (base.tm_wday + *nl_langinfo(_NL_TIME_FIRST_WEEKDAY) - 1) % 7;
         #elif defined __MACH__
             CFIndex first_day_of_week;
             CFCalendarRef currentCalendar = CFCalendarCopyCurrent();
             first_day_of_week = CFCalendarGetFirstWeekday(currentCalendar);
             CFRelease(currentCalendar);
-            CONFIG.first_weekday = (base.tm_wday + first_day_of_week - 1) % 7;
+            CONFIG.weekday = (base.tm_wday + first_day_of_week - 1) % 7;
         #endif
     #endif
 
@@ -426,7 +426,7 @@ int main(int argc, char** argv) {
             { "help",          no_argument,       0, 'h' },
             { "dir",           required_argument, 0, 'd' },
             { "range",         required_argument, 0, 'r' },
-            { "first_weekday", required_argument, 0, 'w' },
+            { "weekday",       required_argument, 0, 'w' },
             { "date_fmt",      required_argument, 0, 'f' },
             { 0,               0,                 0,  0  }
         };
@@ -463,7 +463,7 @@ int main(int argc, char** argv) {
                 case 'w':
                     // set first week day from option character
                     fprintf(stderr, "%i\n", atoi(optarg));
-                    CONFIG.first_weekday = atoi(optarg);
+                    CONFIG.weekday = atoi(optarg);
                     break;
                 case 'f':
                     // set date format from option character
