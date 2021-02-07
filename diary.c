@@ -342,10 +342,10 @@ void usage() {
   printf("  -v, --version                 : Print diary version\n");
   printf("  -h, --help                    : Show diary help text\n");
   printf("  -d, --dir           DIARY_DIR : Diary storage directory DIARY_DIR\n");
+  printf("  -e, --editor        EDITOR    : Editor to open journal files with\n");
+  printf("  -f, --fmt           FMT       : Date and file format, change with care\n");
   printf("  -r, --range         RANGE     : RANGE is the number of years to show before/after today's date\n");
   printf("  -w, --weekday       DAY       : First day of the week, 0 = Sun, 1 = Mon, ..., 6 = Sat\n");
-  printf("  -f, --fmt           FMT       : Date and file format, change with care\n");
-  printf("  -e, --editor        EDITOR    : Editor to open journal files with\n");
   printf("\n");
   printf("Full docs and keyboard shortcuts: DIARY(1)\n");
   printf("or online via: <https://github.com/in0rdr/diary>\n");
@@ -357,37 +357,6 @@ int main(int argc, char** argv) {
     char* config_home;
     char* config_file_path;
     chtype atrs;
-
-    #ifdef __GNU_LIBRARY__
-        // references: locale(5) and util-linux's cal.c
-        // get the base date, 8-digit integer (YYYYMMDD) returned as char *
-        #ifdef _NL_TIME_WEEK_1STDAY
-            unsigned long d = (uintptr_t) nl_langinfo(_NL_TIME_WEEK_1STDAY);
-        // reference: https://sourceware.org/glibc/wiki/Locales
-        // assign a static date value 19971130 (a Sunday)
-        #else
-            unsigned long d = 19971130;
-        #endif
-        struct tm base = {
-            .tm_sec = 0,
-            .tm_min = 0,
-            .tm_hour = 0,
-            .tm_mday = d % 100,
-            .tm_mon = (d / 100) % 100 - 1,
-            .tm_year = d / (100 * 100) - 1900
-        };
-        mktime(&base);
-        // weekday is base date's day of the week offset by (_NL_TIME_FIRST_WEEKDAY - 1)
-        #ifdef __linux__
-            CONFIG.weekday = (base.tm_wday + *nl_langinfo(_NL_TIME_FIRST_WEEKDAY) - 1) % 7;
-        #elif defined __MACH__
-            CFIndex first_day_of_week;
-            CFCalendarRef currentCalendar = CFCalendarCopyCurrent();
-            first_day_of_week = CFCalendarGetFirstWeekday(currentCalendar);
-            CFRelease(currentCalendar);
-            CONFIG.weekday = (base.tm_wday + first_day_of_week - 1) % 7;
-        #endif
-    #endif
 
     // the diary directory defaults to the diary_dir specified in the config file
     config_home = getenv("XDG_CONFIG_HOME");
@@ -414,6 +383,43 @@ int main(int argc, char** argv) {
         strcpy(CONFIG.editor, env_var);
     }
 
+    // get locale from environment variable LANG
+    // https://www.gnu.org/software/gettext/manual/html_node/Locale-Environment-Variables.html
+    env_var = getenv("LANG");
+    if (env_var != NULL) {
+        // if available, overwrite the editor with the environments locale
+        #ifdef __GNU_LIBRARY__
+            // references: locale(5) and util-linux's cal.c
+            // get the base date, 8-digit integer (YYYYMMDD) returned as char *
+            #ifdef _NL_TIME_WEEK_1STDAY
+                unsigned long d = (uintptr_t) nl_langinfo(_NL_TIME_WEEK_1STDAY);
+            // reference: https://sourceware.org/glibc/wiki/Locales
+            // assign a static date value 19971130 (a Sunday)
+            #else
+                unsigned long d = 19971130;
+            #endif
+            struct tm base = {
+                .tm_sec = 0,
+                .tm_min = 0,
+                .tm_hour = 0,
+                .tm_mday = d % 100,
+                .tm_mon = (d / 100) % 100 - 1,
+                .tm_year = d / (100 * 100) - 1900
+            };
+            mktime(&base);
+            // weekday is base date's day of the week offset by (_NL_TIME_FIRST_WEEKDAY - 1)
+            #ifdef __linux__
+                CONFIG.weekday = (base.tm_wday + *nl_langinfo(_NL_TIME_FIRST_WEEKDAY) - 1) % 7;
+            #elif defined __MACH__
+                CFIndex first_day_of_week;
+                CFCalendarRef currentCalendar = CFCalendarCopyCurrent();
+                first_day_of_week = CFCalendarGetFirstWeekday(currentCalendar);
+                CFRelease(currentCalendar);
+                CONFIG.weekday = (base.tm_wday + first_day_of_week - 1) % 7;
+            #endif
+        #endif
+    }
+
     // get the diary directory via argument, this takes precedence over env/config
     if (argc < 2) {
         if (CONFIG.dir == NULL) {
@@ -430,10 +436,10 @@ int main(int argc, char** argv) {
             { "version",       no_argument,       0, 'v' },
             { "help",          no_argument,       0, 'h' },
             { "dir",           required_argument, 0, 'd' },
+            { "editor",        required_argument, 0, 'e' },
+            { "fmt",           required_argument, 0, 'f' },
             { "range",         required_argument, 0, 'r' },
             { "weekday",       required_argument, 0, 'w' },
-            { "fmt",           required_argument, 0, 'f' },
-            { "editor",        required_argument, 0, 'e' },
             { 0,               0,                 0,  0  }
         };
 

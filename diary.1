@@ -22,76 +22,25 @@ Show diary help text
 \fB\-d\fR, \fB\-\-dir\fR=\fI\,DIARY_DIR\/\fR
 Diary storage directory DIARY_DIR
 .TP
-\fB\-r\fR, \fB\-\-range\fR=\fI\,RANGE\/\fR
-RANGE is the number of years to show before/after todays date
-.TP
-\fB\-f\fR, \fB\-\-date_weekday\fR=\fI\,DAY\/\fR
-First day of the week. DAY is an integer in range (0..6),
-interpreted as 0 = Sun, 1 = Mon, ..., 6 = Sat
+\fB\-e\fR, \fB\-\-editor\fR=\fI\,EDITOR\/\fR
+EDITOR is the text editor used for opening the journal files.
 .TP
 \fB\-f\fR, \fB\-\-fmt\fR=\fI\,FMT\/\fR
 FMT is a custom date and file format. Change with care, because the diary
 reads and writes to files with file name FMT. The new FMT is only
 applied to newly saved entries. Existing entries with the old FMT are not
 automatically migrated to the new FMT and do not show up with a new FMT
-specifier. Consequently, a change in FMT shows an empty diary, at first.
+specifier. Consequently, a change in FMT shows an empty diary at first.
 Rename all files in the DIARY_DIR to migrate to a new FMT.
 .TP
-\fB\-e\fR, \fB\-\-editor\fR=\fI\,EDITOR\/\fR
-EDITOR is the text editor used for opening the journal files.
-
-.SH ENVIRONMENT
-
-.IP DIARY_DIR
-If this variable is set to a directory that can be opened,
-.B diary
-will use it to store diary files. Diary files are simple text files named
-after their date, formatted like FMT (see '-f'/'--fmt' options and
-'fmt' config key). The format defaults to "%Y-%m-%d", which is "YYYY-MM-DD"
-(see man strftime). All other files different from FMT are ignored.
-
-.IP EDITOR
-The program used to edit journal entries.
-
-.SH ARGUMENTS
-
-If the argument \fIDIRECTORY\fR is given, diary files are read from and
-stored to that directory, ignoring the DIARY_DIR environment variable,
-any '-d'/'--dir' options or the 'dir' value set in the config file.
-
-.SH FILES
+\fB\-r\fR, \fB\-\-range\fR=\fI\,RANGE\/\fR
+RANGE is the number of years to show before/after todays date. Defaults to 1 year.
 .TP
-.I ${PREFIX:-/usr/local/bin}/diary
-The diary binary
-.TP
-.I ${XDG_CONFIG_HOME:-~/.config}/diary/diary.cfg
-An optional diary configuration file
-
-.SH CONFIGURATION FILE
-The diary.cfg configuration file can optionally be used to persist diary configuration.
-
-Create default config location:
-
-.nf
- $ mkdir -p ~/.config/diary
-.fi
-
-Install an example config file with defaults:
-
-.nf
- $ echo '# Path that holds the journal text files
- #dir = ~/diary
- # Number of years to show before/after todays date
- range = 1
- # 0 = Sunday, 1 = Monday, ..., 6 = Saturday
- weekday = 1
- # Date and file format, change with care
- fmt = %Y-%m-%d
- # Editor to open journal files with
- editor = ""' | sed 's/^[[:space:]]*//' > ~/.config/diary/diary.cfg
-.fi
-
-Use characters '#' or ';' for commenting lines.
+\fB\-f\fR, \fB\-\-weekday\fR=\fI\,DAY\/\fR
+First day of the week. DAY is an integer in range (0..6), interpreted as 0 = Sun,
+1 = Mon, ..., 6 = Sat. If glibc is installed, the first day of the week is derived
+from the current locale setting ('$LANG', see man locale). Without glibc, the
+first weekday defaults to 1 (Monday), unless specified otherwise with this option.
 
 .SH NAVIGATION
 Navigation is done using the following vim-inspired keyboard shortcuts:
@@ -121,9 +70,65 @@ t         | jump to today
 s         | jump to specific day
 .TE
 
+.SH ENVIRONMENT
+
+.IP DIARY_DIR
+If this variable is set to a directory that can be opened,
+.B diary
+will use it to store diary files. Diary files are simple text files named
+after their date, formatted according to FMT (see '-f'/'--fmt' options and
+'fmt' config key). The format defaults to "%Y-%m-%d", which is "YYYY-MM-DD"
+(see man strftime). All other files different from FMT are ignored.
+
+.IP EDITOR
+The program used to edit journal entries.
+
+.IP LANG
+The default locale used to display the first day of the week.
+
+.SH ARGUMENTS
+
+If the argument \fIDIRECTORY\fR is given, diary files are read from and
+stored to that directory, ignoring the DIARY_DIR environment variable,
+any '-d'/'--dir' options or the 'dir' value set in the config file.
+
+.SH FILES
+.TP
+.I ${PREFIX:-/usr/local/bin}/diary
+The diary binary
+.TP
+.I ${XDG_CONFIG_HOME:-~/.config}/diary/diary.cfg
+An optional diary configuration file
+
+.SH CONFIGURATION FILE
+The diary.cfg configuration file can optionally be used to persist diary configuration.
+
+Create default config location:
+
+.nf
+ $ mkdir -p ${XDG_CONFIG_HOME:-~/.config}/diary
+.fi
+
+Install an example config file with defaults:
+
+.nf
+ $ echo '# Path that holds the journal text files
+ #dir = ~/diary
+ # Number of years to show before/after todays date
+ range = 1
+ # 0 = Sunday, 1 = Monday, ..., 6 = Saturday
+ weekday = 1
+ # Date and file format, change with care
+ fmt = %Y-%m-%d
+ # Editor to open journal files with
+ editor = ""' | sed 's/^[[:space:]]*//' > ${XDG_CONFIG_HOME:-~/.config}/diary/diary.cfg
+.fi
+
+Use the '#' or ';' characters to comment lines.
+
 .SH PRECEDENCE RULES
 
-The variable defaults, for instance, for the variables 'EDITOR' and 'DIARY_DIR', are populated with values in the following order:
+The default variables, for instance, for the configuration variables 'editor', 'dir' and 'weekday', are populated with values in the following order:
 
 .TP
 1.
@@ -138,12 +143,12 @@ won't open.
 2.
 .B
 Config file
-(empty default for 'CONFIG.editor', no default for 'CONFIG.dir')
+(empty default for 'editor', no default for 'dir')
 .TP
 3.
 .B
 Environment
-variables '$DIARY_DIR' / '$EDITOR'
+variables '$DIARY_DIR', '$EDITOR' and '$LANG' for locale ('weekday')
 .TP
 4.
 .B
@@ -151,10 +156,36 @@ Option
 arguments, see section
 .B
 OPTIONS
-'-d' / '-e'
 .TP
 5.
 First non-option argument \fIDIRECTORY\fR is interpreted as 'DIARY_DIR'
+
+.SH PRECEDENCE EXAMPLE: LOCALE AND FIRST DAY OF WEEK
+If glibc is installed, the first weekday defaults to the locale defined in the current shell
+environment ($LANG, see man locale), unless specified otherwise via the '--wekday'/'-w'.
+
+.nf
+ # start with weekday=3(Wed), overrule any other configuration value
+ $ diary -w3
+
+ # start with glibc derived weekday=1, regardless of 'weekday' in config file
+ $ LANG=de_CH diary
+
+ # if glibc is installed, start with glibc derived base date (weekday=0)
+ $ LANG= diary
+
+ # disable environment variable, default to value from config file
+ $ unset LANG
+
+ # start with 'weekday' default from config file, if available
+ $ diary
+
+ # remove config file
+ $ rm ${XDG_CONFIG_HOME:-~/.config}/diary/diary.cfg
+
+ # start with 'weekday' default value from source code (1=Mon)
+ $ diary
+.fi
 
 .SH DEVELOPMENT
 All source code is available in this github repository:
