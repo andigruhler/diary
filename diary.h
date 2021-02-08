@@ -47,7 +47,7 @@ typedef struct
     char* dir;
     // Number of years to show before/after todays date
     int range;
-    // 0 = Sunday, 1 = Monday, ..., 6 = Saturday
+    // 7 = Sunday, 1 = Monday, ..., 6 = Saturday
     int weekday;
     // 2020-12-31
     char* fmt;
