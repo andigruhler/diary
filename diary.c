@@ -347,7 +347,7 @@ void usage() {
   printf("  -r, --range         RANGE     : RANGE is the number of years to show before/after today's date\n");
   printf("  -w, --weekday       DAY       : First day of the week, 0 = Sun, 1 = Mon, ..., 6 = Sat\n");
   printf("\n");
-  printf("Full docs and keyboard shortcuts: DIARY(1)\n");
+  printf("Full docs and keyboard shortcuts: 'man diary'\n");
   printf("or online via: <https://github.com/in0rdr/diary>\n");
 }
 
