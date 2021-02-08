@@ -103,7 +103,7 @@ The default variables, for instance, for the configuration variables `editor`, `
 
 ### Precedence Example: Locale and First Day of Week
 
-If glibc is installed, the first weekday defaults to the locale defined in the current shell environment (`$LANG`, see `man locale`), unless specified otherwise via the `--wekday` / `-w` command line options. For example:
+If glibc is installed, the first weekday defaults to the locale defined in the current shell environment (`$LANG`, see `man locale`), unless specified otherwise via the `--weekday` / `-w` command line options. For example:
 
 ```bash
 # start with weekday=3(Wed), overrule any other configuration value
