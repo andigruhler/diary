@@ -92,7 +92,7 @@ The file `${XDG_CONFIG_HOME:-~/.config}/diary/diary.cfg` should adhere to a basi
 ## Precedence Rules
 <a name="precedence_rules"></a>
 
-The default variables, for instance, for the configuration variables `editor`, `dir` and `weekday`, are populated with values in the following order:
+The default variables, for instance, for the configuration variables `editor`, `dir` and `weekday`, are populated with values in the following order, where earlier entries are overwritten by subsequent ones if they exist:
 1. No default for `DIARY_DIR`. Defaults for `range`, `weekday`, `fmt` and `editor` are provided in [diary.h](diary.h)
 * If `EDITOR` is unset and no editor is provided in the config file or via the `-e` option, the diary works read-only. Journal files cannot be opened.
 * If `DIARY_DIR` is not provided, the diary won't open.
