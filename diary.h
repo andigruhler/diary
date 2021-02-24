@@ -21,7 +21,7 @@
 
 #define XDG_CONFIG_HOME_FALLBACK "~/.config"
 #define CONFIG_FILE_PATH "diary/diary.cfg"
-#define DIARY_VERSION "0.5-unstable"
+#define DIARY_VERSION "0.5"
 #define CAL_WIDTH 21
 #define ASIDE_WIDTH 4
 #define MAX_MONTH_HEIGHT 6
