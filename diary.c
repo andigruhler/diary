@@ -6,10 +6,6 @@ struct tm today;
 struct tm curs_date;
 struct tm cal_start;
 struct tm cal_end;
-// 0 = Sunday, 1 = Monday, ..., 6 = Saturday
-int first_weekday = 1;
-
-#define DATE_FMT "%Y-%m-%d"
 
 // normally leap is every 4 years,
 // but is skipped every 100 years,
@@ -23,21 +19,21 @@ void setup_cal_timeframe()
     curs_date = today;
 
     cal_start = today;
-    cal_start.tm_year -= YEAR_RANGE;
+    cal_start.tm_year -= CONFIG.range;
     cal_start.tm_mon = 0;
     cal_start.tm_mday = 1;
     mktime(&cal_start);
 
-    if (cal_start.tm_wday != first_weekday) {
-        // adjust start date to first_weekday before 01.01
+    if (cal_start.tm_wday != CONFIG.weekday) {
+        // adjust start date to weekday before 01.01
         cal_start.tm_year--;
         cal_start.tm_mon = 11;
-        cal_start.tm_mday = 31 - (cal_start.tm_wday - first_weekday) + 1;
+        cal_start.tm_mday = 31 - (cal_start.tm_wday - CONFIG.weekday) + 1;
         mktime(&cal_start);
     }
 
     cal_end = today;
-    cal_end.tm_year += YEAR_RANGE;
+    cal_end.tm_year += CONFIG.range;
     cal_end.tm_mon = 11;
     cal_end.tm_mday = 31;
     mktime(&cal_end);
@@ -46,7 +42,7 @@ void setup_cal_timeframe()
 void draw_wdays(WINDOW* head)
 {
     int i;
-    for (i = first_weekday; i < first_weekday + 7; i++) {
+    for (i = CONFIG.weekday; i < CONFIG.weekday + 7; i++) {
         waddstr(head, WEEKDAYS[i % 7]);
         waddch(head, ' ');
     }
@@ -163,21 +159,13 @@ void display_entry(const char* dir, size_t dir_size, const struct tm* date, WIND
 /* Writes edit command for 'date' entry to 'rcmd'. '*rcmd' is NULL on error. */
 void edit_cmd(const char* dir, size_t dir_size, const struct tm* date, char** rcmd, size_t rcmd_size)
 {
-    // get editor from environment
-    char* editor = getenv("EDITOR");
-    if (editor == NULL) {
-        fprintf(stderr, "'EDITOR' environment variable not set");
-        *rcmd = NULL;
-        return;
-    }
-
     // set the edit command to env editor
-    if (strlen(editor) + 2 > rcmd_size) {
+    if (strlen(CONFIG.editor) + 2 > rcmd_size) {
         fprintf(stderr, "Binary path of default editor too long");
         *rcmd = NULL;
         return;
     }
-    strcpy(*rcmd, editor);
+    strcpy(*rcmd, CONFIG.editor);
     strcat(*rcmd, " ");
 
     // get path of entry
@@ -217,7 +205,7 @@ bool date_has_entry(const char* dir, size_t dir_size, const struct tm* i)
 
 void get_date_str(const struct tm* date, char* date_str, size_t date_str_size)
 {
-    strftime(date_str, date_str_size, DATE_FMT, date);
+    strftime(date_str, date_str_size, CONFIG.fmt, date);
 }
 
 /* Writes file path for 'date' entry to 'rpath'. '*rpath' is NULL on error. */
@@ -287,16 +275,60 @@ struct tm find_closest_entry(const struct tm current,
     return current;
 }
 
-/* Set the diary storage directory.
-*  Copies the path to the storage directory from character
-*  string `path` to the destination location `pdiary_dir`
-*/
-bool set_diary_dir(char* path, char* pdiary_dir, size_t diary_dir_size) {
-    if (strlen(path) + 1 > diary_dir_size) {
-        fprintf(stderr, "Diary directory path too long\n");
+bool read_config(const char* file_path)
+{
+    wordexp_t config_file_path_wordexp;
+    char config_file_path[256];
+
+    if ( wordexp( file_path, &config_file_path_wordexp, 0 ) == 0) {
+        if (strlen(config_file_path_wordexp.we_wordv[0]) + 1 > sizeof config_file_path) {
+            fprintf(stderr, "Config file path '%s' too long\n", config_file_path_wordexp.we_wordv[0]);
+            return false;
+        }
+        strcpy(config_file_path, config_file_path_wordexp.we_wordv[0]);
+    }
+    wordfree(&config_file_path_wordexp);
+
+    // check if config file is readable
+    if( access( config_file_path, R_OK ) != 0 ) {
+        fprintf(stderr, "Config file '%s' not readable, skipping\n", config_file_path);
         return false;
     }
-    strcpy(pdiary_dir, path);
+
+    char key_buf[80];
+    char value_buf[80];
+    char line[256];
+    FILE * pfile;
+
+    // read config file line by line
+    pfile = fopen(config_file_path, "r");
+    while (fgets(line, sizeof line, pfile)) {
+        // ignore comment lines
+        if (*line == '#' || *line == ';') continue;
+
+        if (sscanf(line, "%s = %s", key_buf, value_buf) == 2) {
+            if (strcmp("dir", key_buf) == 0) {
+                wordexp_t diary_dir_wordexp;
+                if ( wordexp( value_buf, &diary_dir_wordexp, 0 ) == 0) {
+                    // set expanded diary directory path from config file
+                    CONFIG.dir = (char *) calloc(strlen(diary_dir_wordexp.we_wordv[0]) + 1, sizeof(char));
+                    strcpy(CONFIG.dir, diary_dir_wordexp.we_wordv[0]);
+                }
+                wordfree(&diary_dir_wordexp);
+            } else if (strcmp("range", key_buf) == 0) {
+                CONFIG.range = atoi(value_buf);
+            } else if (strcmp("weekday", key_buf) == 0) {
+                CONFIG.weekday = atoi(value_buf);
+            } else if (strcmp("fmt", key_buf) == 0) {
+                CONFIG.fmt = (char *) malloc(strlen(value_buf) + 1 * sizeof(char));
+                strcpy(CONFIG.fmt, value_buf);
+            } else if (strcmp("editor", key_buf) == 0) {
+                CONFIG.editor = (char *) malloc(strlen(value_buf) + 1 * sizeof(char));
+                strcpy(CONFIG.editor, value_buf);
+            }
+        }
+    }
+    fclose (pfile);
     return true;
 }
 
@@ -307,35 +339,92 @@ void usage() {
   printf("Edit journal entries from the command line\n");
   printf("\n");
   printf("Options:\n");
-  printf("  -v, --version       : Print diary version\n");
-  printf("  -h, --help          : Show diary help text\n");
-  printf("  -d, --dir DIARY_DIR : Diary storage directory (DIARY_DIR)\n");
+  printf("  -v, --version                 : Print diary version\n");
+  printf("  -h, --help                    : Show diary help text\n");
+  printf("  -d, --dir           DIARY_DIR : Diary storage directory DIARY_DIR\n");
+  printf("  -e, --editor        EDITOR    : Editor to open journal files with\n");
+  printf("  -f, --fmt           FMT       : Date and file format, change with care\n");
+  printf("  -r, --range         RANGE     : RANGE is the number of years to show before/after today's date\n");
+  printf("  -w, --weekday       DAY       : First day of the week, 0 = Sun, 1 = Mon, ..., 6 = Sat\n");
   printf("\n");
-  printf("Full docs and keyboard shortcuts: DIARY(1)\n");
+  printf("Full docs and keyboard shortcuts: 'man diary'\n");
   printf("or online via: <https://github.com/in0rdr/diary>\n");
 }
 
 int main(int argc, char** argv) {
     setlocale(LC_ALL, "");
-    char diary_dir[80];
     char* env_var;
+    char* config_home;
+    char* config_file_path;
     chtype atrs;
 
-    // get the diary directory via environment variable or argument
-    // if both are given, the argument takes precedence
-    if (argc < 2) {
-        // the diary directory is not specified via command line argument
-        // use the environment variable if available
-        env_var = getenv("DIARY_DIR");
-        if (env_var == NULL) {
+    // the diary directory defaults to the diary_dir specified in the config file
+    config_home = getenv("XDG_CONFIG_HOME");
+    if (config_home == NULL) config_home = XDG_CONFIG_HOME_FALLBACK;
+    // concat config home with the file path to the config file
+    config_file_path = (char *) calloc(strlen(config_home) + strlen(CONFIG_FILE_PATH) + 1, sizeof(char));
+    sprintf(config_file_path, "%s/%s", config_home, CONFIG_FILE_PATH);
+    // read config from config file path
+    read_config(config_file_path);
 
+    // get diary directory from environment
+    env_var = getenv("DIARY_DIR");
+    if (env_var != NULL) {
+        // if available, overwrite the diary directory with the environment variable
+        CONFIG.dir = (char *) calloc(strlen(env_var) + 1, sizeof(char));
+        strcpy(CONFIG.dir, env_var);
+    }
+
+    // get editor from environment
+    env_var = getenv("EDITOR");
+    if (env_var != NULL) {
+        // if available, overwrite the editor with the environments EDITOR
+        CONFIG.editor = (char *) calloc(strlen(env_var) + 1, sizeof(char));
+        strcpy(CONFIG.editor, env_var);
+    }
+
+    // get locale from environment variable LANG
+    // https://www.gnu.org/software/gettext/manual/html_node/Locale-Environment-Variables.html
+    env_var = getenv("LANG");
+    if (env_var != NULL) {
+        // if available, overwrite the editor with the environments locale
+        #ifdef __GNU_LIBRARY__
+            // references: locale(5) and util-linux's cal.c
+            // get the base date, 8-digit integer (YYYYMMDD) returned as char *
+            #ifdef _NL_TIME_WEEK_1STDAY
+                unsigned long d = (uintptr_t) nl_langinfo(_NL_TIME_WEEK_1STDAY);
+            // reference: https://sourceware.org/glibc/wiki/Locales
+            // assign a static date value 19971130 (a Sunday)
+            #else
+                unsigned long d = 19971130;
+            #endif
+            struct tm base = {
+                .tm_sec = 0,
+                .tm_min = 0,
+                .tm_hour = 0,
+                .tm_mday = d % 100,
+                .tm_mon = (d / 100) % 100 - 1,
+                .tm_year = d / (100 * 100) - 1900
+            };
+            mktime(&base);
+            // weekday is base date's day of the week offset by (_NL_TIME_FIRST_WEEKDAY - 1)
+            #ifdef __linux__
+                CONFIG.weekday = (base.tm_wday + *nl_langinfo(_NL_TIME_FIRST_WEEKDAY) - 1) % 7;
+            #elif defined __MACH__
+                CFIndex first_day_of_week;
+                CFCalendarRef currentCalendar = CFCalendarCopyCurrent();
+                first_day_of_week = CFCalendarGetFirstWeekday(currentCalendar);
+                CFRelease(currentCalendar);
+                CONFIG.weekday = (base.tm_wday + first_day_of_week - 1) % 7;
+            #endif
+        #endif
+    }
+
+    // get the diary directory via argument, this takes precedence over env/config
+    if (argc < 2) {
+        if (CONFIG.dir == NULL) {
             fprintf(stderr, "The diary directory must be provided as (non-option) arg, `--dir` arg,\n"
                             "or in the DIARY_DIR environment variable, see `diary --help` or DIARY(1)\n");
-            return 1;
-        }
-
-        // set diary directory from environment variable
-        if ( !set_diary_dir(env_var, diary_dir, sizeof diary_dir) ) {
             return 1;
         }
     } else {
@@ -344,15 +433,19 @@ int main(int argc, char** argv) {
 
         // define options, see GETOPT(3)
         static const struct option long_options[] = {
-            { "version", no_argument,       0, 'v' },
-            { "help",    no_argument,       0, 'h' },
-            { "dir",     required_argument, 0, 'd' },
-            { 0,         0,                 0,  0  }
+            { "version",       no_argument,       0, 'v' },
+            { "help",          no_argument,       0, 'h' },
+            { "dir",           required_argument, 0, 'd' },
+            { "editor",        required_argument, 0, 'e' },
+            { "fmt",           required_argument, 0, 'f' },
+            { "range",         required_argument, 0, 'r' },
+            { "weekday",       required_argument, 0, 'w' },
+            { 0,               0,                 0,  0  }
         };
 
         // read option characters
         while (1) {
-            option_char = getopt_long(argc, argv, "vhd:", long_options, &option_index);
+            option_char = getopt_long(argc, argv, "vhd:r:w:f:e:", long_options, &option_index);
 
             if (option_char == -1) {
                 break;
@@ -372,9 +465,27 @@ int main(int argc, char** argv) {
                     break;
                 case 'd':
                     // set diary directory from option character
-                    if ( !set_diary_dir(optarg, diary_dir, sizeof diary_dir) ) {
-                        return 1;
-                    }
+                    CONFIG.dir = (char *) calloc(strlen(optarg) + 1, sizeof(char));
+                    strcpy(CONFIG.dir, optarg);
+                    break;
+                case 'r':
+                    // set year range from option character
+                    CONFIG.range = atoi(optarg);
+                    break;
+                case 'w':
+                    // set first week day from option character
+                    fprintf(stderr, "%i\n", atoi(optarg));
+                    CONFIG.weekday = atoi(optarg);
+                    break;
+                case 'f':
+                    // set date format from option character
+                    CONFIG.fmt = (char *) calloc(strlen(optarg) + 1, sizeof(char));
+                    strcpy(CONFIG.fmt, optarg);
+                    break;
+                case 'e':
+                    // set default editor from option character
+                    CONFIG.editor = (char *) calloc(strlen(optarg) + 1, sizeof(char));
+                    strcpy(CONFIG.editor, optarg);
                     break;
                 default:
                     printf("?? getopt returned character code 0%o ??\n", option_char);
@@ -384,55 +495,23 @@ int main(int argc, char** argv) {
         if (optind < argc) {
             // set diary directory from first non-option argv-element,
             // required for backwarad compatibility with diary <= 0.4
-            if ( !set_diary_dir(argv[optind], diary_dir, sizeof diary_dir) ) {
-                return 1;
-            }
+            CONFIG.dir = (char *) calloc(strlen(argv[optind]) + 1, sizeof(char));
+            strcpy(CONFIG.dir, argv[optind]);
         }
     }
 
     // check if that directory exists
-    DIR* diary_dir_ptr = opendir(diary_dir);
+    DIR* diary_dir_ptr = opendir(CONFIG.dir);
     if (diary_dir_ptr) {
         // directory exists, continue
         closedir(diary_dir_ptr);
     } else if (errno == ENOENT) {
-        fprintf(stderr, "The directory '%s' does not exist\n", diary_dir);
+        fprintf(stderr, "The directory '%s' does not exist\n", CONFIG.dir);
         return 2;
     } else {
-        fprintf(stderr, "The directory '%s' could not be opened\n", diary_dir);
+        fprintf(stderr, "The directory '%s' could not be opened\n", CONFIG.dir);
         return 1;
     }
-
-    #ifdef __GNU_LIBRARY__
-        // references: locale(5) and util-linux's cal.c
-        // get the base date, 8-digit integer (YYYYMMDD) returned as char *
-        #ifdef _NL_TIME_WEEK_1STDAY
-            unsigned long d = (uintptr_t) nl_langinfo(_NL_TIME_WEEK_1STDAY);
-        // reference: https://sourceware.org/glibc/wiki/Locales
-        // assign a static date value 19971130 (a Sunday)
-        #else
-            unsigned long d = 19971130;
-        #endif
-        struct tm base = {
-            .tm_sec = 0,
-            .tm_min = 0,
-            .tm_hour = 0,
-            .tm_mday = d % 100,
-            .tm_mon = (d / 100) % 100 - 1,
-            .tm_year = d / (100 * 100) - 1900
-        };
-        mktime(&base);
-        // first_weekday is base date's day of the week offset by (_NL_TIME_FIRST_WEEKDAY - 1)
-        #ifdef __linux__
-            first_weekday = (base.tm_wday + *nl_langinfo(_NL_TIME_FIRST_WEEKDAY) - 1) % 7;
-        #elif defined __MACH__
-            CFIndex first_day_of_week;
-            CFCalendarRef currentCalendar = CFCalendarCopyCurrent();
-            first_day_of_week = CFCalendarGetFirstWeekday(currentCalendar);
-            CFRelease(currentCalendar);
-            first_weekday = (base.tm_wday + first_day_of_week - 1) % 7;
-        #endif
-    #endif
 
     setup_cal_timeframe();
 
@@ -446,10 +525,10 @@ int main(int argc, char** argv) {
     WINDOW* wdays = newwin(1, 3 * 7, 0, ASIDE_WIDTH);
     draw_wdays(wdays);
 
-    WINDOW* aside = newpad((YEAR_RANGE * 2 + 1) * 12 * MAX_MONTH_HEIGHT, ASIDE_WIDTH);
-    WINDOW* cal = newpad((YEAR_RANGE * 2 + 1) * 12 * MAX_MONTH_HEIGHT, CAL_WIDTH);
+    WINDOW* aside = newpad((CONFIG.range * 2 + 1) * 12 * MAX_MONTH_HEIGHT, ASIDE_WIDTH);
+    WINDOW* cal = newpad((CONFIG.range * 2 + 1) * 12 * MAX_MONTH_HEIGHT, CAL_WIDTH);
     keypad(cal, TRUE);
-    draw_calendar(cal, aside, diary_dir, strlen(diary_dir));
+    draw_calendar(cal, aside, CONFIG.dir, strlen(CONFIG.dir));
 
     int ch, conf_ch;
     int pad_pos = 0;
@@ -457,7 +536,7 @@ int main(int argc, char** argv) {
     struct tm new_date;
     int prev_width = COLS - ASIDE_WIDTH - CAL_WIDTH;
     int prev_height = LINES - 1;
-    size_t diary_dir_size = strlen(diary_dir);
+    size_t diary_dir_size = strlen(CONFIG.dir);
 
     bool mv_valid = go_to(cal, aside, raw_time, &pad_pos);
     // mark current day
@@ -466,7 +545,7 @@ int main(int argc, char** argv) {
     prefresh(cal, pad_pos, 0, 1, ASIDE_WIDTH, LINES - 1, ASIDE_WIDTH + CAL_WIDTH);
 
     WINDOW* prev = newwin(prev_height, prev_width, 1, ASIDE_WIDTH + CAL_WIDTH);
-    display_entry(diary_dir, strlen(diary_dir), &today, prev, prev_width);
+    display_entry(CONFIG.dir, diary_dir_size, &today, prev, prev_width);
 
 
     do {
@@ -479,7 +558,7 @@ int main(int argc, char** argv) {
         char pth[100];
         char* ppth = pth;
         char dstr[16];
-        edit_cmd(diary_dir, diary_dir_size, &new_date, &pecmd, sizeof ecmd);
+        edit_cmd(CONFIG.dir, diary_dir_size, &new_date, &pecmd, sizeof ecmd);
 
         switch(ch) {
             // basic movements
@@ -506,11 +585,11 @@ int main(int argc, char** argv) {
 
             // jump to top/bottom of page
             case 'g':
-                new_date = find_closest_entry(cal_start, false, diary_dir, diary_dir_size);
+                new_date = find_closest_entry(cal_start, false, CONFIG.dir, diary_dir_size);
                 mv_valid = go_to(cal, aside, mktime(&new_date), &pad_pos);
                 break;
             case 'G':
-                new_date = find_closest_entry(cal_end, true, diary_dir, diary_dir_size);
+                new_date = find_closest_entry(cal_end, true, CONFIG.dir, diary_dir_size);
                 mv_valid = go_to(cal, aside, mktime(&new_date), &pad_pos);
                 break;
 
@@ -551,9 +630,9 @@ int main(int argc, char** argv) {
             // delete entry
             case 'd':
             case 'x':
-                if (date_has_entry(diary_dir, diary_dir_size, &curs_date)) {
+                if (date_has_entry(CONFIG.dir, diary_dir_size, &curs_date)) {
                     // get file path of entry and delete entry
-                    fpath(diary_dir, diary_dir_size, &curs_date, &ppth, sizeof pth);
+                    fpath(CONFIG.dir, diary_dir_size, &curs_date, &ppth, sizeof pth);
                     if (ppth == NULL) {
                         fprintf(stderr, "Error retrieving file path for entry removal");
                         break;
@@ -601,7 +680,7 @@ int main(int argc, char** argv) {
                 keypad(cal, TRUE);
 
                 // mark newly created entry
-                if (date_has_entry(diary_dir, diary_dir_size, &curs_date)) {
+                if (date_has_entry(CONFIG.dir, diary_dir_size, &curs_date)) {
                     atrs = winch(cal) & A_ATTRIBUTES;
                     wchgat(cal, 2, atrs | A_BOLD, 0, NULL);
 
@@ -612,12 +691,12 @@ int main(int argc, char** argv) {
                 break;
             // Move to the previous diary entry
             case 'N':
-                new_date = find_closest_entry(new_date, true, diary_dir, diary_dir_size);
+                new_date = find_closest_entry(new_date, true, CONFIG.dir, diary_dir_size);
                 mv_valid = go_to(cal, aside, mktime(&new_date), &pad_pos);
                 break;
             // Move to the next diary entry
             case 'n':
-                new_date = find_closest_entry(new_date, false, diary_dir, diary_dir_size);
+                new_date = find_closest_entry(new_date, false, CONFIG.dir, diary_dir_size);
                 mv_valid = go_to(cal, aside, mktime(&new_date), &pad_pos);
                 break;
         }
@@ -630,7 +709,7 @@ int main(int argc, char** argv) {
             wresize(prev, prev_height, prev_width);
 
             // read the diary
-            display_entry(diary_dir, diary_dir_size, &curs_date, prev, prev_width);
+            display_entry(CONFIG.dir, diary_dir_size, &curs_date, prev, prev_width);
         }
     } while (ch != 'q');
 
