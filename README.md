@@ -59,6 +59,7 @@ The Arch Linux repository on the OBS is broken, see [#69](https://github.com/in0
 To use the repository on Arch Linux, use `downloadcontent.opensuse.org` instead of the [suggested](https://software.opensuse.org/download.html?project=home%3Ain0rdr&package=diary) name `download.opensuse.org` in the `/etc/pacman.conf`:
 ```
 [home_in0rdr_Arch]
+SigLevel = Never
 Server = https://downloadcontent.opensuse.org/repositories/home:/in0rdr/Arch/$arch
 ```
 
