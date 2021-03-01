@@ -52,6 +52,17 @@ This is a text based diary, inspired by [khal](https://github.com/pimutils/khal)
 
 Pre-built packages can be installed from the [Open Build Service (OBS)](https://software.opensuse.org//download.html?project=home%3Ain0rdr&package=diary)
 
+### Arch Linux OBS Repository Bug
+
+The Arch Linux repository on the OBS is broken, see [#69](https://github.com/in0rdr/diary/issues/69) and [#9953](https://github.com/openSUSE/open-build-service/issues/9953).
+
+To use the repository on Arch Linux, use `downloadcontent.opensuse.org` instead of the [suggested](https://software.opensuse.org/download.html?project=home%3Ain0rdr&package=diary) name `download.opensuse.org` in the `/etc/pacman.conf`:
+```
+[home_in0rdr_Arch]
+SigLevel = Never
+Server = https://downloadcontent.opensuse.org/repositories/home:/in0rdr/Arch/$arch
+```
+
 ## Build
 [![Build Status](https://travis-ci.org/in0rdr/diary.svg?branch=master)](https://travis-ci.org/in0rdr/diary)
 
