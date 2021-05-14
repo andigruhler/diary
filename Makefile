@@ -1,5 +1,5 @@
 TARGET = diary
-SRC = diary.c
+SRC = caldav.c diary.c
 PREFIX ?= /usr/local
 BINDIR ?= $(DESTDIR)$(PREFIX)/bin
 
@@ -7,7 +7,9 @@ MANDIR := $(DESTDIR)$(PREFIX)/share/man
 MAN1 = diary.1
 
 CC = gcc
-CFLAGS = -Wall
+CFLAGS = -Wall \
+         -DGOOGLE_OAUTH_CLIENT_ID=\"$(GOOGLE_OAUTH_CLIENT_ID)\" \
+         -DGOOGLE_OAUTH_CLIENT_SECRET=\"$(GOOGLE_OAUTH_CLIENT_SECRET)\"
 UNAME = ${shell uname}
 
 ifeq ($(UNAME),FreeBSD)

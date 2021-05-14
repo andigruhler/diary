@@ -27,7 +27,7 @@ This is a text based diary, inspired by [khal](https://github.com/pimutils/khal)
     e, Enter  Edit the current entry
     d, x      Delete/remove current entry
     t         Jump to today
-    s         Jump to specific day
+    f         Find specific date
 
     j, down   go forward by 1 week
     k, up     go backward by 1 week
@@ -42,6 +42,8 @@ This is a text based diary, inspired by [khal](https://github.com/pimutils/khal)
 
     J         Go forward by 1 month
     K         Go backward by 1 month
+
+    s         Sync changes with CalDAV server
 
     q         quit the program
     ```
@@ -65,14 +67,19 @@ Server = https://downloadcontent.opensuse.org/repositories/home:/in0rdr/Arch/$ar
 ## Build
 [![Build Status](https://travis-ci.org/in0rdr/diary.svg?branch=master)](https://travis-ci.org/in0rdr/diary)
 
+1. Define [OAuth2 application credentials](https://developers.google.com/identity/protocols/oauth2) if CalDAV sync should be effective:
+    ```
+    export GOOGLE_OAUTH_CLIENT_ID=""
+    export GOOGLE_OAUTH_CLIENT_SECRET=""
+    ```
 
-1. Compile (requires ncurses):
+2. Compile (requires ncurses and libcurl):
     ```
     make
     ```
 Note: for *BSD users run gmake.
 
-2. Install the binary (optional):
+3. Install the binary (optional):
     ```
     sudo make install
     ```

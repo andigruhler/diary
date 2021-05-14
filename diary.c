@@ -606,8 +606,8 @@ int main(int argc, char** argv) {
                 mv_valid = go_to(cal, aside, mktime(&new_date), &pad_pos);
                 break;
 
-            // search for specific date
-            case 's':
+            // find specific date
+            case 'f':
                 wclear(header);
                 curs_set(2);
                 mvwprintw(header, 0, 0, "Go to date [YYYY-MM-DD]: ");
@@ -698,6 +698,14 @@ int main(int argc, char** argv) {
             case 'n':
                 new_date = find_closest_entry(new_date, false, CONFIG.dir, diary_dir_size);
                 mv_valid = go_to(cal, aside, mktime(&new_date), &pad_pos);
+                break;
+            // Sync with CalDAV server
+            case 's':
+                get_date_str(&curs_date, dstr, sizeof dstr);
+                fprintf(stderr, "\nCursor date: %s\n\n", dstr);
+
+                caldav_sync(&curs_date, header);
+
                 break;
         }
 

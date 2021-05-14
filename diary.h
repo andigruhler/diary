@@ -1,5 +1,5 @@
-#ifndef DIARY
-#define DIARY
+#ifndef DIARY_H
+#define DIARY_H
 
 
 #ifdef __MACH__
@@ -18,6 +18,7 @@
 #include <ncurses.h>
 #include <locale.h>
 #include <langinfo.h>
+#include "caldav.h"
 
 #define XDG_CONFIG_HOME_FALLBACK "~/.config"
 #define CONFIG_FILE_PATH "diary/diary.cfg"
