@@ -15,6 +15,26 @@ void random_code_challenge(size_t len, char* dest) {
     dest[len-1] = '\0';
 }
 
+static size_t curl_write_mem_callback(void * contents, size_t size, size_t nmemb, void *userp) {
+    size_t realsize = size * nmemb;
+    struct curl_mem_chunk* mem = (struct curl_mem_chunk*)userp;
+
+    char* ptr = realloc(mem->memory, mem->size + realsize + 1);
+    if (!ptr) {
+        fprintf(stderr, "not enough memory (realloc in CURLOPT_WRITEFUNCTION returned NULL)\n");
+        return 0;
+    }
+
+    mem->memory = ptr;
+    memcpy(&(mem->memory[mem->size]), contents, realsize);
+    mem->size += realsize;
+    mem->memory[mem->size] = 0;
+
+    return realsize;
+}
+
+// todo
+// https://beej.us/guide/bgnet/html
 void* get_in_addr(struct sockaddr *sa) {
     if (sa->sa_family == AF_INET) {
         return &(((struct sockaddr_in*)sa)->sin_addr);
@@ -23,53 +43,76 @@ void* get_in_addr(struct sockaddr *sa) {
     return &(((struct sockaddr_in6*)sa)->sin6_addr);
 }
 
+/*
+* Extract OAuth2 code from http header. Reads the code from
+* the http header in http_header and writes the OAuth2 code
+* to the char string pointed to by code.
+*/
+char* extract_oauth_code(char* http_header) {
+    // example token: "/?code=&scope="
+    char* res = strtok(http_header, " ");
+    while (res != NULL) {
+        //fprintf(stderr, "Token: %s\n", tok);
+        if (strstr(res, "code") != NULL) {
+            res = strtok(res, "="); // code key
+            res = strtok(NULL, "&"); // code value
+            fprintf(stderr, "Code: %s\n", res);
+            break;
+        }
+        res = strtok(NULL, " ");
+    }
+    return res;
+}
+
 void caldav_sync(const struct tm* date, WINDOW* header) {
     char challenge[GOOGLE_OAUTH_CODE_VERIFIER_LENGTH];
     random_code_challenge(GOOGLE_OAUTH_CODE_VERIFIER_LENGTH, challenge);
+    fprintf(stderr, "Challenge/Verifier: %s\n", challenge);
 
-    struct addrinfo hints, *res;
+    struct addrinfo hints, *addr_res;
 
     memset(&hints, 0, sizeof(struct addrinfo));
     hints.ai_family = AF_UNSPEC;
     hints.ai_socktype = SOCK_STREAM;
 
     int status;
-    if ((status=getaddrinfo(NULL, MKSTR(GOOGLE_OAUTH_REDIRECT_PORT), &hints, &res)) != 0) {
+    if ((status=getaddrinfo(NULL, MKSTR(GOOGLE_OAUTH_REDIRECT_PORT), &hints, &addr_res)) != 0) {
         fprintf(stderr, "getaddrinfo: %s\n", gai_strerror(status));
     }
 
     void *addr;
     char *ipver;
     //todo: extract
-    //addr = get_in_addr(res->ai_addr);
-    if (res->ai_family == AF_INET) {
-        struct sockaddr_in *ipv4 = (struct sockaddr_in *) res->ai_addr;
+    //addr = get_in_addr(addr_res->ai_addr);
+    if (addr_res->ai_family == AF_INET) {
+        struct sockaddr_in *ipv4 = (struct sockaddr_in *) addr_res->ai_addr;
         addr = &(ipv4->sin_addr);
         ipver = "IPv4";
     } else { // IPv6
-        struct sockaddr_in6 *ipv6 = (struct sockaddr_in6 *) res->ai_addr;
+        struct sockaddr_in6 *ipv6 = (struct sockaddr_in6 *) addr_res->ai_addr;
         addr = &(ipv6->sin6_addr);
         ipver = "IPv6";
     }
 
     // Reserve 2 chars for the ipv6 square brackets
     char ip[INET6_ADDRSTRLEN], ipstr[INET6_ADDRSTRLEN+2];
-    inet_ntop(res->ai_family, addr, ip, sizeof ip);
+    inet_ntop(addr_res->ai_family, addr, ip, sizeof ip);
 
     if (strcmp("IPv6", ipver) == 0) {
         sprintf(ipstr, "[%s]", ip);
     }
 
     // Show Google Oauth URI
-    char uri[250];
-    sprintf(uri, "%s?scope=%s&response_type=%s&redirect_uri=http://%s:%i&client_id=%s",
+    char uri[300];
+    sprintf(uri, "%s?scope=%s&code_challenge=%s&response_type=%s&redirect_uri=http://%s:%i&client_id=%s",
             GOOGLE_OAUTH_AUTHZ_URL,
             GOOGLE_OAUTH_SCOPE,
+            challenge,
             GOOGLE_OAUTH_RESPONSE_TYPE,
             ipstr,
             GOOGLE_OAUTH_REDIRECT_PORT,
             GOOGLE_OAUTH_CLIENT_ID);
-    //fprintf(stderr, "Google OAuth2 authorization URI: %s\n", uri);
+    fprintf(stderr, "Google OAuth2 authorization URI: %s\n", uri);
 
     // Show the Google OAuth2 authorization URI in the header
     wclear(header);
@@ -82,7 +125,7 @@ void caldav_sync(const struct tm* date, WINDOW* header) {
     //curs_set(0);
     wrefresh(header);
 
-    int socketfd = socket(res->ai_family, res->ai_socktype, res->ai_protocol);
+    int socketfd = socket(addr_res->ai_family, addr_res->ai_socktype, addr_res->ai_protocol);
     if (socketfd < 0) {
        perror("Error opening socket");
     }
@@ -91,11 +134,11 @@ void caldav_sync(const struct tm* date, WINDOW* header) {
     int yes=1;
     setsockopt(socketfd, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof yes);
 
-    if (bind(socketfd, res->ai_addr, res->ai_addrlen) < 0) {
+    if (bind(socketfd, addr_res->ai_addr, addr_res->ai_addrlen) < 0) {
        perror("Error binding socket");
     }
 
-    freeaddrinfo(res);
+    freeaddrinfo(addr_res);
 
     int ls = listen(socketfd, GOOGLE_OAUTH_REDIRECT_SOCKET_BACKLOG);
     if (ls < 0) {
@@ -111,14 +154,19 @@ void caldav_sync(const struct tm* date, WINDOW* header) {
     int fd_count = 2;
             
     int connfd, bytes_rec, bytes_sent;
+    char http_header[8*1024];
     char* reply =
     "HTTP/1.1 200 OK\n"
     "Content-Type: text/html\n"
     "Connection: close\n\n"
+    "<html>"
+    "<head><title>Authorization successfull</title></head>"
+    "<body>"
     "<p><b>Authorization successfull.</b></p>"
     "<p>You consented that diary can access your Google calendar.<br/>"
-    "Pleasee close this window and return to diary.</p>";
-    char http_header[8*1024];
+    "Pleasee close this window and return to diary.</p>"
+    "</body>"
+    "</html>";
 
     // Handle descriptors read-to-read (POLLIN),
     // stdin or server socker, whichever is first
@@ -171,17 +219,46 @@ void caldav_sync(const struct tm* date, WINDOW* header) {
     // close server socket
     close(pfds[1].fd);
 
-//    CURL *curl;
-//    CURLcode res;
-//
-//    curl = curl_easy_init();
-//    if (curl) {
-//        curl_easy_setops(curl, CURLOPT_URL, "https://accounts.google.com/o/oauth2/auth");
-//        res = curl_easy_perform(curl);
-//        if (res != CURLE_OK) {
-//            fprintf(stderr, "curl_easy_perorm() failed: %s\n", curl_easy_strerror(res));
-//        }
-//        curl_easy_cleanup(curl);
-//    }
+    char* code = extract_oauth_code(http_header);
+    fprintf(stderr, "CODE: %s\n", code);
+
+    CURL *curl;
+    CURLcode res;
+
+    char postfields[300];
+    sprintf(postfields, "client_id=%s&client_secret=%s&code=%s&code_verifier=%s&grant_type=authorization_code&redirect_uri=http://%s:%i",
+            GOOGLE_OAUTH_CLIENT_ID,
+            GOOGLE_OAUTH_CLIENT_SECRET,
+            code,
+            challenge,
+            ipstr,
+            GOOGLE_OAUTH_REDIRECT_PORT);
+    fprintf(stderr, "CURLOPT_POSTFIELDS: %s\n", postfields);
+
+    curl = curl_easy_init();
+
+    // https://curl.se/libcurl/c/getinmemory.html
+    struct curl_mem_chunk access_rfsh_tkn;
+    access_rfsh_tkn.memory = malloc(1);
+    access_rfsh_tkn.size = 0;
+
+    fprintf(stderr, "Challenge/Verifier: %s\n", challenge);
+    if (curl) {
+        curl_easy_setopt(curl, CURLOPT_URL, GOOGLE_OAUTH_TOKEN_URL);
+        curl_easy_setopt(curl, CURLOPT_POSTFIELDS, postfields);
+        curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, curl_write_mem_callback);
+        curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void *)&access_rfsh_tkn);
+
+        res = curl_easy_perform(curl);
+
+        if (res != CURLE_OK) {
+            fprintf(stderr, "curl_easy_perform() failed: %s\n", curl_easy_strerror(res));
+        }
+
+        fprintf(stderr, "Curl retrieved %lu bytes\n", (unsigned long)access_rfsh_tkn.size);
+        fprintf(stderr, "Curl content: %s\n", access_rfsh_tkn.memory);
+
+        curl_easy_cleanup(curl);
+    }
 }
 

@@ -14,7 +14,6 @@
 #include <arpa/inet.h>
 #include <errno.h>
 #include <ncurses.h>
-//#include <openssl/sha.h>
 #include <curl/curl.h>
 
 #define STR(s) #s
@@ -24,6 +23,7 @@
 // A valid code_verifier has a length between 43 and 128 characters
 #define GOOGLE_OAUTH_CODE_VERIFIER_LENGTH 43
 #define GOOGLE_OAUTH_AUTHZ_URL "https://accounts.google.com/o/oauth2/auth"
+#define GOOGLE_OAUTH_TOKEN_URL "https://oauth2.googleapis.com/token"
 #define GOOGLE_OAUTH_SCOPE "https://www.googleapis.com/auth/calendar.events.owned"
 #define GOOGLE_OAUTH_RESPONSE_TYPE "code"
 #define GOOGLE_OAUTH_REDIRECT_HOST "127.0.0.1"
@@ -32,5 +32,10 @@
 #define GOOGLE_OAUTH_REDIRECT_SOCKET_BACKLOG 10
 
 void caldav_sync(const struct tm* date, WINDOW* header);
+
+struct curl_mem_chunk {
+    char* memory;
+    size_t size;
+};
 
 #endif
