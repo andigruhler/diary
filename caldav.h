@@ -24,13 +24,12 @@
 // A valid code_verifier has a length between 43 and 128 characters
 #define GOOGLE_OAUTH_CODE_VERIFIER_LENGTH 43
 #define GOOGLE_OAUTH_AUTHZ_URL "https://accounts.google.com/o/oauth2/auth"
-#define GOOGLE_OAUTH_SCOPE "calendar.events.owned"
+#define GOOGLE_OAUTH_SCOPE "https://www.googleapis.com/auth/calendar.events.owned"
 #define GOOGLE_OAUTH_RESPONSE_TYPE "code"
 #define GOOGLE_OAUTH_REDIRECT_HOST "127.0.0.1"
 #define GOOGLE_OAUTH_REDIRECT_PORT 9004
 #define GOOGLE_OAUTH_REDIRECT_URI "http://" GOOGLE_OAUTH_REDIRECT_HOST ":" MKSTR(GOOGLE_OAUTH_REDIRECT_PORT)
 #define GOOGLE_OAUTH_REDIRECT_SOCKET_BACKLOG 10
-#define GOOGLE_OAUTH_RESPONSE_HEADER_SIZE 84
 
 void caldav_sync(const struct tm* date, WINDOW* header);
 

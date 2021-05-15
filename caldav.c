@@ -61,7 +61,6 @@ void caldav_sync(const struct tm* date, WINDOW* header) {
     }
 
     // Show Google Oauth URI
-    fprintf(stderr, "Code challenge: %s\n", challenge);
     char uri[250];
     sprintf(uri, "%s?scope=%s&response_type=%s&redirect_uri=http://%s:%i&client_id=%s",
             GOOGLE_OAUTH_AUTHZ_URL,
@@ -78,7 +77,7 @@ void caldav_sync(const struct tm* date, WINDOW* header) {
     getmaxyx(header, row, col);
     wresize(header, row+5, col);
     //curs_set(2);
-    mvwprintw(header, 0, 0, "Go to Google OAuth2 authorization URI. Use 'ESC', 'CTRL+C' or 'q' to quit authorization process.\n%s", uri);
+    mvwprintw(header, 0, 0, "Go to Google OAuth2 authorization URI. Use 'q' or 'Ctrl+c' to quit authorization process.\n%s", uri);
 
     //curs_set(0);
     wrefresh(header);
@@ -87,6 +86,10 @@ void caldav_sync(const struct tm* date, WINDOW* header) {
     if (socketfd < 0) {
        perror("Error opening socket");
     }
+
+    // reuse socket address
+    int yes=1;
+    setsockopt(socketfd, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof yes);
 
     if (bind(socketfd, res->ai_addr, res->ai_addrlen) < 0) {
        perror("Error binding socket");
@@ -107,13 +110,18 @@ void caldav_sync(const struct tm* date, WINDOW* header) {
     pfds[1].events = POLLIN;
     int fd_count = 2;
             
-    int len, bytes_rec, bytes_sent;
-    char* msg =
-    "HTTP/1.1 200 OK\r\n\r\n"
-    "hello world\r\n";
-    len = strlen(msg);
-    char code[GOOGLE_OAUTH_RESPONSE_HEADER_SIZE];
+    int connfd, bytes_rec, bytes_sent;
+    char* reply =
+    "HTTP/1.1 200 OK\n"
+    "Content-Type: text/html\n"
+    "Connection: close\n\n"
+    "<p><b>Authorization successfull.</b></p>"
+    "<p>You consented that diary can access your Google calendar.<br/>"
+    "Pleasee close this window and return to diary.</p>";
+    char http_header[8*1024];
 
+    // Handle descriptors read-to-read (POLLIN),
+    // stdin or server socker, whichever is first
     for (;;) {
         int poll_count = poll(pfds, fd_count, -1);
 
@@ -121,76 +129,47 @@ void caldav_sync(const struct tm* date, WINDOW* header) {
             perror("poll");
             break;
         }
+
+        // Cancel through stdin
         if (pfds[0].revents & POLLIN) {
-            int ch = fgetc(stdin);
+            int ch = getchar();
             // sudo showkey -a 
             // Ctrl+c: ^C 0x03
-            // Escape: ^[ 0x1b
             // q     :  q 0x71
-            if (ch == 0x03 || ch == 0x1b || ch == 0x71) {
+            if (ch == 0x03 || ch == 0x71) {
+                fprintf(stderr, "Escape char: %x\n", ch);
                 fprintf(stderr, "Hanging up, closing server socket\n");
-                close(pfds[1].fd);
                 break;
             }
         }
-        for (int i = 0; i < fd_count; i++) {
-            if (pfds[i].revents & POLLIN && pfds[i].fd == socketfd) {
-                // accept connections but ignore client addr
-                int connfd = accept(socketfd, NULL, NULL);
-                if (connfd < 0) {
-                   perror("Error accepting connection");
-                }
+        if (pfds[1].revents & POLLIN) {
+            // accept connections but ignore client addr
+            connfd = accept(socketfd, NULL, NULL);
+            if (connfd < 0) {
+               perror("Error accepting connection");
+               break;
+            }
 
-                bytes_rec = recv(connfd, code, sizeof code, 0);
-                if (bytes_rec == 0) {
-                    fprintf(stderr, "Remote hung up\n");
-                    break;
-                } else if (bytes_rec < 0) {
-                    perror("Error reading stream message");
-                    break;
-                }
-                fprintf(stderr, "Received code: %s\n", code);
-            
-            //    "Authorization step successfull: You consented that diary can access your Google calendar.\r\n"
-            //    "Pleasee close this window and return to diary.\r\n";
-            
-                bytes_sent = send(connfd, msg, len, 0);
-                if (bytes_sent < 0) {
-                   perror("Error sending");
-                }
-            
-                close(connfd);
-                //close(socketfd);
-
+            bytes_rec = recv(connfd, http_header, sizeof http_header, 0);
+            if (bytes_rec < 0) {
+                perror("Error reading stream message");
                 break;
-            } // end if server socket
-        } // end for fd_count
+            }
+            fprintf(stderr, "Received http header: %s\n", http_header);
+
+            bytes_sent = send(connfd, reply, strlen(reply), 0);
+            if (bytes_sent < 0) {
+               perror("Error sending");
+            }
+            fprintf(stderr, "Bytes sent: %i\n", bytes_sent);
+
+            close(connfd);
+            break;
+        }
     } // end for ;;
 
-//    int bytes_rec, bytes_sent;
-//    char buff[50];
-//    // reading stream returns number of bytes read,
-//    // until stream ends, then it returns 0
-//    while ( (bytes_rec=read(connfd, buff, strlen(buff))) ) {
-//       if (bytes_rec < 0) {
-//           perror("Error reading stream message");
-//           break;
-//       }
-//       fprintf(stderr, "reading");
-//    }
-//    while ( (bytes_sent=write(2, buff, strlen(buff))) ) {
-//       // write buffer to stderr
-//       if (bytes_sent < 0) {
-//           perror("Error writing buffer to stderr");
-//       }
-//       fprintf(stderr, "writing");
-//    }
-//
-//    write(connfd, "GET /\r\n", strlen("GET /\r\n"));
-
-//    close(connfd);
-//    close(socketfd);
-
+    // close server socket
+    close(pfds[1].fd);
 
 //    CURL *curl;
 //    CURLcode res;
