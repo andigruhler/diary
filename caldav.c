@@ -3,6 +3,7 @@
 CURL *curl;
 char* access_token;
 char* refresh_token;
+int token_ttl;
 
 // Local bind address for receiving OAuth callbacks.
 // Reserve 2 chars for the ipv6 square brackets.
@@ -140,16 +141,35 @@ char* refresh_access_token(char* refresh_token) {
     return "not implemented";
 }
 
-void set_access_token(char* code, char* verifier) {
-    if (code == NULL || verifier == NULL) {
-        // no code or token challenge (verifier) to get token,
-        // try to refresh existing token
-        //refresh_access_token();
-        return;
+void read_tokenfile() {
+    FILE* token_file;
+    char* token_buff;
+    long token_bytes;
+
+    char* tokenfile_path = expand_path(CONFIG.google_tokenfile);
+    token_file = fopen(tokenfile_path, "r");
+    if (token_file == NULL) {
+        perror("Failed to open tokenfile:");
     }
 
+    fseek(token_file, 0, SEEK_END);
+    token_bytes = ftell(token_file);
+    fseek(token_file, 0L, SEEK_SET);
+
+    token_buff = (char*)calloc(token_bytes, sizeof(char));
+    fread(token_buff, sizeof(char), token_bytes, token_file);
+    fclose(token_file);
+
+    access_token = extract_oauth_token(token_buff);
+    token_ttl = extract_oauth_token_ttl(token_buff);
+    refresh_token = extract_oauth_refresh_token(token_buff);
+    fprintf(stderr, "Access token: %s\n", access_token);
+    fprintf(stderr, "Token TTL: %i\n", token_ttl);
+    fprintf(stderr, "Refresh token: %s\n", refresh_token);
+}
+
+void get_access_token_from_code(char* code, char* verifier) {
     CURLcode res;
-    int token_ttl;
 
     char postfields[500];
     sprintf(postfields, "client_id=%s&client_secret=%s&code=%s&code_verifier=%s&grant_type=authorization_code&redirect_uri=http://%s:%i",
@@ -168,7 +188,7 @@ void set_access_token(char* code, char* verifier) {
     //token_result.memory = malloc(1);
     //token_result.size = 0;
 
-    FILE *tokenfile;
+    FILE* tokenfile;
     char* tokenfile_path;
 
     if (curl) {
@@ -195,22 +215,12 @@ void set_access_token(char* code, char* verifier) {
 
         //fprintf(stderr, "Curl retrieved %lu bytes\n", (unsigned long)token_result.size);
         //fprintf(stderr, "Curl content: %s\n", token_result.memory);
-        //access_token = extract_oauth_token(token_result.memory);
-        //token_ttl = extract_oauth_token_ttl(token_result.memory);
-        //refresh_token = extract_oauth_refresh_token(token_result.memory);
-        //fprintf(stderr, "Access token: %s\n", access_token);
-        //fprintf(stderr, "Token TTL: %i\n", token_ttl);
-        //fprintf(stderr, "Refresh token: %s\n", refresh_token);
 
         curl_easy_cleanup(curl);
     }
 }
 
-void caldav_sync(struct tm* date, WINDOW* header) {
-    char challenge[GOOGLE_OAUTH_CODE_VERIFIER_LENGTH];
-    random_code_challenge(GOOGLE_OAUTH_CODE_VERIFIER_LENGTH, challenge);
-    fprintf(stderr, "Challenge/Verifier: %s\n", challenge);
-
+char* get_oauth_code(const char* verifier, WINDOW* header) {
     struct addrinfo hints, *addr_res;
 
     memset(&hints, 0, sizeof(struct addrinfo));
@@ -246,7 +256,7 @@ void caldav_sync(struct tm* date, WINDOW* header) {
     sprintf(uri, "%s?scope=%s&code_challenge=%s&response_type=%s&redirect_uri=http://%s:%i&client_id=%s",
             GOOGLE_OAUTH_AUTHZ_URL,
             GOOGLE_OAUTH_SCOPE,
-            challenge,
+            verifier,
             GOOGLE_OAUTH_RESPONSE_TYPE,
             ipstr,
             GOOGLE_OAUTH_REDIRECT_PORT,
@@ -358,17 +368,36 @@ void caldav_sync(struct tm* date, WINDOW* header) {
     char* code = extract_oauth_code(http_header);
     if (code == NULL) {
         fprintf(stderr, "Found no OAuth code in http header.\n");
-        return;
+        return NULL;
     }
     fprintf(stderr, "OAuth code: %s\n", code);
 
-    set_access_token(code, challenge);
-    //fprintf(stderr, "Access token: %s\n", access_token);
+    return code;
+}
+
+void caldav_sync(struct tm* date, WINDOW* header) {
+    // fetch existing API tokens
+    read_tokenfile();
+
+    // check if we can use the existing token
+
+    // create new verifier
+    char challenge[GOOGLE_OAUTH_CODE_VERIFIER_LENGTH];
+    random_code_challenge(GOOGLE_OAUTH_CODE_VERIFIER_LENGTH, challenge);
+    fprintf(stderr, "Challenge/Verifier: %s\n", challenge);
+
+    // fetch new code with verifier
+    char* code = get_oauth_code(challenge, header);
+    if (code == NULL) {
+        fprintf(stderr, "Error retrieving access code.\n");
+        return;
+    }
+
+    // get acess token using code and verifier
+    get_access_token_from_code(code, challenge);
 
     char dstr[16];
     mktime(date);
     get_date_str(date, dstr, sizeof dstr, CONFIG.fmt);
     fprintf(stderr, "\nCursor date: %s\n\n", dstr);
-    
 }
-
