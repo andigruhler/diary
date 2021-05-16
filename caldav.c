@@ -217,7 +217,11 @@ void caldav_sync(const struct tm* date, WINDOW* header) {
     close(pfds[1].fd);
 
     char* code = extract_oauth_code(http_header);
-    fprintf(stderr, "CODE: %s\n", code);
+    if (code == NULL) {
+        fprintf(stderr, "Found no OAuth code in http header.\n");
+        return;
+    }
+    fprintf(stderr, "OAuth code: %s\n", code);
 
     CURL *curl;
     CURLcode res;
