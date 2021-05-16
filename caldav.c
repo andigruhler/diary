@@ -52,11 +52,69 @@ char* extract_oauth_code(char* http_header) {
     // example token: "/?code=&scope="
     char* res = strtok(http_header, " ");
     while (res != NULL) {
-        //fprintf(stderr, "Token: %s\n", tok);
         if (strstr(res, "code") != NULL) {
             res = strtok(res, "="); // code key
             res = strtok(NULL, "&"); // code value
             fprintf(stderr, "Code: %s\n", res);
+            break;
+        }
+        res = strtok(NULL, " ");
+    }
+    return res;
+}
+
+// Extract OAuth2 token from json response
+char* extract_oauth_token(char* json) {
+    char* res = (char *) malloc(strlen(json) * sizeof(char));
+    strcpy(res, json);
+
+    // example json:
+    // {
+    //   "access_token": "ya29.a0AfH6SMB1xpfVS6OdyRop3OjdetuwizbG1B83wRhQMxEym0fMf9HYwKBs_ulSgZSOMgH-FRcVGEGAnVPCaKjs0afExqAuy-aOQbBu2v4uu42V7Juwb11FDqftuVJpTjErVY_KWk1yG0EgzmVAlVZK8YsxQlPB",
+    //   "expires_in": 3599,
+    //   "refresh_token": "1//09hh-LM2w29NNCgYIARAAGAkSNwF-L9Ir_cOriqpjUHd97eiWNywBWjFiMRshfxlQFxpDIg8XqhK4OasuxGlro0r1XK1OuprSlNc",
+    //   "scope": "https://www.googleapis.com/auth/calendar.events.owned",
+    //   "token_type": "Bearer"
+    // }
+    res = strtok(res, " ");
+    while (res != NULL) {
+        if (strstr(res, "access_token") != NULL) {
+            res = strtok(NULL, " "); // token value
+            res = strtok(res, "\"");
+            break;
+        }
+        res = strtok(NULL, " ");
+    }
+    return res;
+}
+
+// Extract OAuth2 token expiration time
+char* extract_oauth_expiration(char* json) {
+    char* res = (char *) malloc(strlen(json) * sizeof(char));
+    strcpy(res, json);
+
+    res = strtok(res, " ");
+    while (res != NULL) {
+        if (strstr(res, "expires_in") != NULL) {
+            res = strtok(NULL, " "); // expiration time
+            res = strtok(res, ",");
+            break;
+        }
+        res = strtok(NULL, " ");
+    }
+    return res;
+}
+
+// Extract OAuth2 refresh token from json response
+char* extract_oauth_refresh_token(char* json) {
+    char* res = (char *) malloc(strlen(json) * sizeof(char));
+    strcpy(res, json);
+
+    res = strtok(json, " ");
+    while (res != NULL) {
+        if (strstr(res, "refresh_token") != NULL) {
+            res = strtok(NULL, " "); // token value
+            res = strtok(res, "\"");
             break;
         }
         res = strtok(NULL, " ");
@@ -258,6 +316,12 @@ void caldav_sync(const struct tm* date, WINDOW* header) {
 
         fprintf(stderr, "Curl retrieved %lu bytes\n", (unsigned long)access_rfsh_tkn.size);
         fprintf(stderr, "Curl content: %s\n", access_rfsh_tkn.memory);
+        char* access_token = extract_oauth_token(access_rfsh_tkn.memory);
+        char* token_ttl = extract_oauth_expiration(access_rfsh_tkn.memory);
+        char* refresh_token = extract_oauth_refresh_token(access_rfsh_tkn.memory);
+        fprintf(stderr, "Access token: %s\n", access_token);
+        fprintf(stderr, "Token TTL: %s\n", token_ttl);
+        fprintf(stderr, "Refresh token: %s\n", refresh_token);
 
         curl_easy_cleanup(curl);
     }
