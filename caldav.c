@@ -1,5 +1,13 @@
 #include "caldav.h"
 
+CURL *curl;
+char* access_token;
+char* refresh_token;
+
+// Local bind address for receiving OAuth callbacks.
+// Reserve 2 chars for the ipv6 square brackets.
+char ip[INET6_ADDRSTRLEN], ipstr[INET6_ADDRSTRLEN+2];
+
 /* Write a random code challenge of size len to dest */
 void random_code_challenge(size_t len, char* dest) {
     // https://developers.google.com/identity/protocols/oauth2/native-app#create-code-challenge
@@ -73,7 +81,7 @@ char* extract_oauth_token(char* json) {
     //   "access_token": "ya29.a0AfH6SMB1xpfVS6OdyRop3OjdetuwizbG1B83wRhQMxEym0fMf9HYwKBs_ulSgZSOMgH-FRcVGEGAnVPCaKjs0afExqAuy-aOQbBu2v4uu42V7Juwb11FDqftuVJpTjErVY_KWk1yG0EgzmVAlVZK8YsxQlPB",
     //   "expires_in": 3599,
     //   "refresh_token": "1//09hh-LM2w29NNCgYIARAAGAkSNwF-L9Ir_cOriqpjUHd97eiWNywBWjFiMRshfxlQFxpDIg8XqhK4OasuxGlro0r1XK1OuprSlNc",
-    //   "scope": "https://www.googleapis.com/auth/calendar.events.owned",
+    //   "scope": "https://www.googleapis.com/auth/calendar",
     //   "token_type": "Bearer"
     // }
     res = strtok(res, " ");
@@ -88,21 +96,21 @@ char* extract_oauth_token(char* json) {
     return res;
 }
 
-// Extract OAuth2 token expiration time
-char* extract_oauth_expiration(char* json) {
+// Extract OAuth2 token ttl
+int extract_oauth_token_ttl(char* json) {
     char* res = (char *) malloc(strlen(json) * sizeof(char));
     strcpy(res, json);
 
     res = strtok(res, " ");
     while (res != NULL) {
         if (strstr(res, "expires_in") != NULL) {
-            res = strtok(NULL, " "); // expiration time
+            res = strtok(NULL, " "); // ttl
             res = strtok(res, ",");
             break;
         }
         res = strtok(NULL, " ");
     }
-    return res;
+    return atoi(res);
 }
 
 // Extract OAuth2 refresh token from json response
@@ -122,7 +130,65 @@ char* extract_oauth_refresh_token(char* json) {
     return res;
 }
 
-void caldav_sync(const struct tm* date, WINDOW* header) {
+// todo: refresh OAuth2 access token
+char* refresh_access_token(char* refresh_token) {
+    return "not implemented";
+}
+
+void set_access_token(char* code, char* verifier) {
+    if (code == NULL || verifier == NULL) {
+        // no code or token challenge (verifier) to get token,
+        // try to refresh existing token
+        //refresh_access_token();
+        return;
+    }
+
+    CURLcode res;
+    int token_ttl;
+
+    char postfields[300];
+    sprintf(postfields, "client_id=%s&client_secret=%s&code=%s&code_verifier=%s&grant_type=authorization_code&redirect_uri=http://%s:%i",
+            GOOGLE_OAUTH_CLIENT_ID,
+            GOOGLE_OAUTH_CLIENT_SECRET,
+            code,
+            verifier,
+            ipstr,
+            GOOGLE_OAUTH_REDIRECT_PORT);
+    fprintf(stderr, "CURLOPT_POSTFIELDS: %s\n", postfields);
+
+    curl = curl_easy_init();
+
+    // https://curl.se/libcurl/c/getinmemory.html
+    struct curl_mem_chunk token_result;
+    token_result.memory = malloc(1);
+    token_result.size = 0;
+
+    if (curl) {
+        curl_easy_setopt(curl, CURLOPT_URL, GOOGLE_OAUTH_TOKEN_URL);
+        curl_easy_setopt(curl, CURLOPT_POSTFIELDS, postfields);
+        curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, curl_write_mem_callback);
+        curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void *)&token_result);
+
+        res = curl_easy_perform(curl);
+
+        if (res != CURLE_OK) {
+            fprintf(stderr, "curl_easy_perform() failed: %s\n", curl_easy_strerror(res));
+        }
+
+        //fprintf(stderr, "Curl retrieved %lu bytes\n", (unsigned long)token_result.size);
+        //fprintf(stderr, "Curl content: %s\n", token_result.memory);
+        access_token = extract_oauth_token(token_result.memory);
+        token_ttl = extract_oauth_token_ttl(token_result.memory);
+        refresh_token = extract_oauth_refresh_token(token_result.memory);
+        //fprintf(stderr, "Access token: %s\n", access_token);
+        //fprintf(stderr, "Token TTL: %i\n", token_ttl);
+        //fprintf(stderr, "Refresh token: %s\n", refresh_token);
+
+        curl_easy_cleanup(curl);
+    }
+}
+
+void caldav_sync(struct tm* date, WINDOW* header) {
     char challenge[GOOGLE_OAUTH_CODE_VERIFIER_LENGTH];
     random_code_challenge(GOOGLE_OAUTH_CODE_VERIFIER_LENGTH, challenge);
     fprintf(stderr, "Challenge/Verifier: %s\n", challenge);
@@ -152,15 +218,12 @@ void caldav_sync(const struct tm* date, WINDOW* header) {
         ipver = "IPv6";
     }
 
-    // Reserve 2 chars for the ipv6 square brackets
-    char ip[INET6_ADDRSTRLEN], ipstr[INET6_ADDRSTRLEN+2];
     inet_ntop(addr_res->ai_family, addr, ip, sizeof ip);
-
     if (strcmp("IPv6", ipver) == 0) {
         sprintf(ipstr, "[%s]", ip);
     }
 
-    // Show Google Oauth URI
+    // Show Google OAuth URI
     char uri[300];
     sprintf(uri, "%s?scope=%s&code_challenge=%s&response_type=%s&redirect_uri=http://%s:%i&client_id=%s",
             GOOGLE_OAUTH_AUTHZ_URL,
@@ -174,8 +237,8 @@ void caldav_sync(const struct tm* date, WINDOW* header) {
 
     // Show the Google OAuth2 authorization URI in the header
     wclear(header);
-    int row, col;
-    getmaxyx(header, row, col);
+    int col;
+    col = getmaxx(header);
     wresize(header, LINES, col);
     mvwprintw(header, 0, 0, "Go to Google OAuth2 authorization URI. Use 'q' or 'Ctrl+c' to quit authorization process.\n%s", uri);
     wrefresh(header);
@@ -281,49 +344,13 @@ void caldav_sync(const struct tm* date, WINDOW* header) {
     }
     fprintf(stderr, "OAuth code: %s\n", code);
 
-    CURL *curl;
-    CURLcode res;
+    set_access_token(code, challenge);
+    fprintf(stderr, "Access token: %s\n", access_token);
 
-    char postfields[300];
-    sprintf(postfields, "client_id=%s&client_secret=%s&code=%s&code_verifier=%s&grant_type=authorization_code&redirect_uri=http://%s:%i",
-            GOOGLE_OAUTH_CLIENT_ID,
-            GOOGLE_OAUTH_CLIENT_SECRET,
-            code,
-            challenge,
-            ipstr,
-            GOOGLE_OAUTH_REDIRECT_PORT);
-    fprintf(stderr, "CURLOPT_POSTFIELDS: %s\n", postfields);
-
-    curl = curl_easy_init();
-
-    // https://curl.se/libcurl/c/getinmemory.html
-    struct curl_mem_chunk access_rfsh_tkn;
-    access_rfsh_tkn.memory = malloc(1);
-    access_rfsh_tkn.size = 0;
-
-    fprintf(stderr, "Challenge/Verifier: %s\n", challenge);
-    if (curl) {
-        curl_easy_setopt(curl, CURLOPT_URL, GOOGLE_OAUTH_TOKEN_URL);
-        curl_easy_setopt(curl, CURLOPT_POSTFIELDS, postfields);
-        curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, curl_write_mem_callback);
-        curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void *)&access_rfsh_tkn);
-
-        res = curl_easy_perform(curl);
-
-        if (res != CURLE_OK) {
-            fprintf(stderr, "curl_easy_perform() failed: %s\n", curl_easy_strerror(res));
-        }
-
-        fprintf(stderr, "Curl retrieved %lu bytes\n", (unsigned long)access_rfsh_tkn.size);
-        fprintf(stderr, "Curl content: %s\n", access_rfsh_tkn.memory);
-        char* access_token = extract_oauth_token(access_rfsh_tkn.memory);
-        char* token_ttl = extract_oauth_expiration(access_rfsh_tkn.memory);
-        char* refresh_token = extract_oauth_refresh_token(access_rfsh_tkn.memory);
-        fprintf(stderr, "Access token: %s\n", access_token);
-        fprintf(stderr, "Token TTL: %s\n", token_ttl);
-        fprintf(stderr, "Refresh token: %s\n", refresh_token);
-
-        curl_easy_cleanup(curl);
-    }
+    char dstr[16];
+    mktime(date);
+    get_date_str(date, dstr, sizeof dstr, CONFIG.fmt);
+    fprintf(stderr, "\nCursor date: %s\n\n", dstr);
+    
 }
 
