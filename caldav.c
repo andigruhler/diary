@@ -118,11 +118,8 @@ void caldav_sync(const struct tm* date, WINDOW* header) {
     wclear(header);
     int row, col;
     getmaxyx(header, row, col);
-    wresize(header, row+5, col);
-    //curs_set(2);
+    wresize(header, LINES, col);
     mvwprintw(header, 0, 0, "Go to Google OAuth2 authorization URI. Use 'q' or 'Ctrl+c' to quit authorization process.\n%s", uri);
-
-    //curs_set(0);
     wrefresh(header);
 
     int socketfd = socket(addr_res->ai_family, addr_res->ai_socktype, addr_res->ai_protocol);
