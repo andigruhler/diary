@@ -41,6 +41,11 @@ static size_t curl_write_mem_callback(void * contents, size_t size, size_t nmemb
     return realsize;
 }
 
+static size_t write_data(void *ptr, size_t size, size_t nmemb, void *stream) {
+  size_t written = fwrite(ptr, size, nmemb, (FILE *)stream);
+  return written;
+}
+
 // todo
 // https://beej.us/guide/bgnet/html
 void* get_in_addr(struct sockaddr *sa) {
@@ -159,17 +164,30 @@ void set_access_token(char* code, char* verifier) {
     curl = curl_easy_init();
 
     // https://curl.se/libcurl/c/getinmemory.html
-    struct curl_mem_chunk token_result;
-    token_result.memory = malloc(1);
-    token_result.size = 0;
+    //struct curl_mem_chunk token_result;
+    //token_result.memory = malloc(1);
+    //token_result.size = 0;
+
+    FILE *tokenfile;
+    char* tokenfile_path;
 
     if (curl) {
         curl_easy_setopt(curl, CURLOPT_URL, GOOGLE_OAUTH_TOKEN_URL);
         curl_easy_setopt(curl, CURLOPT_POSTFIELDS, postfields);
-        curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, curl_write_mem_callback);
-        curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void *)&token_result);
+        curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, write_data);
+        //curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, curl_write_mem_callback);
+        //curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void *)&token_result);
 
-        res = curl_easy_perform(curl);
+        tokenfile_path = expand_path(CONFIG.google_tokenfile);
+        tokenfile = fopen(tokenfile_path, "wb");
+        if (tokenfile == NULL) {
+            perror("Failed to open tokenfile:");
+            fprintf(stderr, "Tokenfile: %s\n", tokenfile_path);
+        } else {
+            curl_easy_setopt(curl, CURLOPT_WRITEDATA, tokenfile);
+            res = curl_easy_perform(curl);
+            fclose(tokenfile);
+        }
 
         if (res != CURLE_OK) {
             fprintf(stderr, "curl_easy_perform() failed: %s\n", curl_easy_strerror(res));
@@ -177,9 +195,9 @@ void set_access_token(char* code, char* verifier) {
 
         //fprintf(stderr, "Curl retrieved %lu bytes\n", (unsigned long)token_result.size);
         //fprintf(stderr, "Curl content: %s\n", token_result.memory);
-        access_token = extract_oauth_token(token_result.memory);
-        token_ttl = extract_oauth_token_ttl(token_result.memory);
-        refresh_token = extract_oauth_refresh_token(token_result.memory);
+        //access_token = extract_oauth_token(token_result.memory);
+        //token_ttl = extract_oauth_token_ttl(token_result.memory);
+        //refresh_token = extract_oauth_refresh_token(token_result.memory);
         //fprintf(stderr, "Access token: %s\n", access_token);
         //fprintf(stderr, "Token TTL: %i\n", token_ttl);
         //fprintf(stderr, "Refresh token: %s\n", refresh_token);
@@ -345,7 +363,7 @@ void caldav_sync(struct tm* date, WINDOW* header) {
     fprintf(stderr, "OAuth code: %s\n", code);
 
     set_access_token(code, challenge);
-    fprintf(stderr, "Access token: %s\n", access_token);
+    //fprintf(stderr, "Access token: %s\n", access_token);
 
     char dstr[16];
     mktime(date);

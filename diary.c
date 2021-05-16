@@ -321,8 +321,13 @@ bool read_config(const char* file_path)
                 CONFIG.editor = (char *) malloc(strlen(value_buf) + 1 * sizeof(char));
                 strcpy(CONFIG.editor, value_buf);
             } else if (strcmp("google_tokenfile", key_buf) == 0) {
-                CONFIG.google_tokenfile = (char *) malloc(strlen(value_buf) + 1 * sizeof(char));
-                strcpy(CONFIG.google_tokenfile, value_buf);
+                wordexp_t tokenfile_wordexp;
+                if ( wordexp( value_buf, &tokenfile_wordexp, 0 ) == 0) {
+                    // set expanded tokenfile path from config file
+                    CONFIG.google_tokenfile = (char *) calloc(strlen(tokenfile_wordexp.we_wordv[0]) + 1, sizeof(char));
+                    strcpy(CONFIG.google_tokenfile, tokenfile_wordexp.we_wordv[0]);
+                }
+                wordfree(&tokenfile_wordexp);
             } else if (strcmp("google_clientid", key_buf) == 0) {
                 CONFIG.google_clientid = (char *) malloc(strlen(value_buf) + 1 * sizeof(char));
                 strcpy(CONFIG.google_clientid, value_buf);

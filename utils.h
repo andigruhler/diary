@@ -3,6 +3,8 @@
 
 #include <stdlib.h>
 #include <time.h>
+#include <string.h>
+#include <wordexp.h>
 
 #define GOOGLE_OAUTH_TOKEN_FILE "~/.diary-token"
 #ifndef GOOGLE_OAUTH_CLIENT_ID
@@ -11,6 +13,8 @@
 #ifndef GOOGLE_OAUTH_CLIENT_SECRET
     #define GOOGLE_OAUTH_CLIENT_SECRET ""
 #endif
+
+char* expand_path(char* str);
 
 typedef struct
 {
