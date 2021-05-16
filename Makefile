@@ -1,5 +1,5 @@
 TARGET = diary
-SRC = caldav.c diary.c
+SRC = utils.c caldav.c diary.c
 PREFIX ?= /usr/local
 BINDIR ?= $(DESTDIR)$(PREFIX)/bin
 

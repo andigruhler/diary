@@ -18,6 +18,7 @@
 #include <ncurses.h>
 #include <locale.h>
 #include <langinfo.h>
+#include "utils.h"
 #include "caldav.h"
 
 #define XDG_CONFIG_HOME_FALLBACK "~/.config"
@@ -39,28 +40,6 @@ void display_entry(const char* dir, size_t dir_size, const struct tm* date, WIND
 void edit_cmd(const char* dir, size_t dir_size, const struct tm* date, char** rcmd, size_t rcmd_size);
 
 bool date_has_entry(const char* dir, size_t dir_size, const struct tm* i);
-void get_date_str(const struct tm* date, char* date_str, size_t date_str_size);
 void fpath(const char* dir, size_t dir_size, const struct tm* date, char** rpath, size_t rpath_size);
-
-typedef struct
-{
-    // Path that holds the journal text files
-    char* dir;
-    // Number of years to show before/after todays date
-    int range;
-    // 7 = Sunday, 1 = Monday, ..., 6 = Saturday
-    int weekday;
-    // 2020-12-31
-    char* fmt;
-    // Editor to open journal files with
-    char* editor;
-} config;
-
-config CONFIG = {
-    .range = 1,
-    .weekday = 1,
-    .fmt = "%Y-%m-%d",
-    .editor = ""
-};
 
 #endif

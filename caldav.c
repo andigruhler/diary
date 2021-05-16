@@ -146,7 +146,7 @@ void set_access_token(char* code, char* verifier) {
     CURLcode res;
     int token_ttl;
 
-    char postfields[300];
+    char postfields[500];
     sprintf(postfields, "client_id=%s&client_secret=%s&code=%s&code_verifier=%s&grant_type=authorization_code&redirect_uri=http://%s:%i",
             GOOGLE_OAUTH_CLIENT_ID,
             GOOGLE_OAUTH_CLIENT_SECRET,
@@ -224,7 +224,7 @@ void caldav_sync(struct tm* date, WINDOW* header) {
     }
 
     // Show Google OAuth URI
-    char uri[300];
+    char uri[500];
     sprintf(uri, "%s?scope=%s&code_challenge=%s&response_type=%s&redirect_uri=http://%s:%i&client_id=%s",
             GOOGLE_OAUTH_AUTHZ_URL,
             GOOGLE_OAUTH_SCOPE,

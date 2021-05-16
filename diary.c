@@ -85,7 +85,7 @@ void update_date(WINDOW* header)
 {
     char dstr[16];
     mktime(&curs_date);
-    get_date_str(&curs_date, dstr, sizeof dstr);
+    get_date_str(&curs_date, dstr, sizeof dstr, CONFIG.fmt);
 
     wclear(header);
     mvwaddstr(header, 0, 0, dstr);
@@ -203,11 +203,6 @@ bool date_has_entry(const char* dir, size_t dir_size, const struct tm* i)
     return (access(epath, F_OK) != -1);
 }
 
-void get_date_str(const struct tm* date, char* date_str, size_t date_str_size)
-{
-    strftime(date_str, date_str_size, CONFIG.fmt, date);
-}
-
 /* Writes file path for 'date' entry to 'rpath'. '*rpath' is NULL on error. */
 void fpath(const char* dir, size_t dir_size, const struct tm* date, char** rpath, size_t rpath_size)
 {
@@ -233,7 +228,7 @@ void fpath(const char* dir, size_t dir_size, const struct tm* date, char** rpath
     }
 
     char dstr[16];
-    get_date_str(date, dstr, sizeof dstr);
+    get_date_str(date, dstr, sizeof dstr, CONFIG.fmt);
 
     // append date to the result path
     if (strlen(*rpath) + strlen(dstr) > rpath_size) {
@@ -644,7 +639,7 @@ int main(int argc, char** argv) {
                     noecho();
 
                     // ask for confirmation
-                    get_date_str(&curs_date, dstr, sizeof dstr);
+                    get_date_str(&curs_date, dstr, sizeof dstr, CONFIG.fmt);
                     mvwprintw(header, 0, 0, "Delete entry '%s'? [Y/n] ", dstr);
                     bool conf = false;
                     while (!conf) {
@@ -701,11 +696,9 @@ int main(int argc, char** argv) {
                 break;
             // Sync with CalDAV server
             case 's':
-                get_date_str(&curs_date, dstr, sizeof dstr);
-                fprintf(stderr, "\nCursor date: %s\n\n", dstr);
-
+                //get_date_str(&curs_date, dstr, sizeof dstr, CONFIG.fmt);
+                mktime(&curs_date);
                 caldav_sync(&curs_date, header);
-
                 break;
         }
 
