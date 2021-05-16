@@ -4,6 +4,14 @@
 #include <stdlib.h>
 #include <time.h>
 
+#define GOOGLE_OAUTH_TOKEN_FILE "~/.diary-token"
+#ifndef GOOGLE_OAUTH_CLIENT_ID
+    #define GOOGLE_OAUTH_CLIENT_ID ""
+#endif
+#ifndef GOOGLE_OAUTH_CLIENT_SECRET
+    #define GOOGLE_OAUTH_CLIENT_SECRET ""
+#endif
+
 typedef struct
 {
     // Path that holds the journal text files
@@ -16,6 +24,14 @@ typedef struct
     char* fmt;
     // Editor to open journal files with
     char* editor;
+    // File for Google OAuth access token
+    char* google_tokenfile;
+    // Google client id
+    char* google_clientid;
+    // Google secret id
+    char* google_secretid;
+    // Google calendar to synchronize
+    char* google_calendar;
 } config;
 
 config CONFIG;

@@ -320,6 +320,18 @@ bool read_config(const char* file_path)
             } else if (strcmp("editor", key_buf) == 0) {
                 CONFIG.editor = (char *) malloc(strlen(value_buf) + 1 * sizeof(char));
                 strcpy(CONFIG.editor, value_buf);
+            } else if (strcmp("google_tokenfile", key_buf) == 0) {
+                CONFIG.google_tokenfile = (char *) malloc(strlen(value_buf) + 1 * sizeof(char));
+                strcpy(CONFIG.google_tokenfile, value_buf);
+            } else if (strcmp("google_clientid", key_buf) == 0) {
+                CONFIG.google_clientid = (char *) malloc(strlen(value_buf) + 1 * sizeof(char));
+                strcpy(CONFIG.google_clientid, value_buf);
+            } else if (strcmp("google_secretid", key_buf) == 0) {
+                CONFIG.google_secretid = (char *) malloc(strlen(value_buf) + 1 * sizeof(char));
+                strcpy(CONFIG.google_secretid, value_buf);
+            } else if (strcmp("google_calendar", key_buf) == 0) {
+                CONFIG.google_calendar = (char *) malloc(strlen(value_buf) + 1 * sizeof(char));
+                strcpy(CONFIG.google_calendar, value_buf);
             }
         }
     }

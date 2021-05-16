@@ -148,8 +148,8 @@ void set_access_token(char* code, char* verifier) {
 
     char postfields[500];
     sprintf(postfields, "client_id=%s&client_secret=%s&code=%s&code_verifier=%s&grant_type=authorization_code&redirect_uri=http://%s:%i",
-            GOOGLE_OAUTH_CLIENT_ID,
-            GOOGLE_OAUTH_CLIENT_SECRET,
+            CONFIG.google_clientid,
+            CONFIG.google_secretid,
             code,
             verifier,
             ipstr,
@@ -232,7 +232,7 @@ void caldav_sync(struct tm* date, WINDOW* header) {
             GOOGLE_OAUTH_RESPONSE_TYPE,
             ipstr,
             GOOGLE_OAUTH_REDIRECT_PORT,
-            GOOGLE_OAUTH_CLIENT_ID);
+            CONFIG.google_clientid);
     fprintf(stderr, "Google OAuth2 authorization URI: %s\n", uri);
 
     // Show the Google OAuth2 authorization URI in the header
