@@ -77,65 +77,6 @@ char* extract_oauth_code(char* http_header) {
     return res;
 }
 
-// Extract OAuth2 token from json response
-char* extract_oauth_token(char* json) {
-    char* res = (char *) malloc(strlen(json) * sizeof(char));
-    strcpy(res, json);
-
-    // example json:
-    // {
-    //   "access_token": "ya29.a0AfH6SMB1xpfVS6OdyRop3OjdetuwizbG1B83wRhQMxEym0fMf9HYwKBs_ulSgZSOMgH-FRcVGEGAnVPCaKjs0afExqAuy-aOQbBu2v4uu42V7Juwb11FDqftuVJpTjErVY_KWk1yG0EgzmVAlVZK8YsxQlPB",
-    //   "expires_in": 3599,
-    //   "refresh_token": "1//09hh-LM2w29NNCgYIARAAGAkSNwF-L9Ir_cOriqpjUHd97eiWNywBWjFiMRshfxlQFxpDIg8XqhK4OasuxGlro0r1XK1OuprSlNc",
-    //   "scope": "https://www.googleapis.com/auth/calendar",
-    //   "token_type": "Bearer"
-    // }
-    res = strtok(res, " ");
-    while (res != NULL) {
-        if (strstr(res, "access_token") != NULL) {
-            res = strtok(NULL, " "); // token value
-            res = strtok(res, "\"");
-            break;
-        }
-        res = strtok(NULL, " ");
-    }
-    return res;
-}
-
-// Extract OAuth2 token ttl
-int extract_oauth_token_ttl(char* json) {
-    char* res = (char *) malloc(strlen(json) * sizeof(char));
-    strcpy(res, json);
-
-    res = strtok(res, " ");
-    while (res != NULL) {
-        if (strstr(res, "expires_in") != NULL) {
-            res = strtok(NULL, " "); // ttl
-            res = strtok(res, ",");
-            break;
-        }
-        res = strtok(NULL, " ");
-    }
-    return atoi(res);
-}
-
-// Extract OAuth2 refresh token from json response
-char* extract_oauth_refresh_token(char* json) {
-    char* res = (char *) malloc(strlen(json) * sizeof(char));
-    strcpy(res, json);
-
-    res = strtok(json, " ");
-    while (res != NULL) {
-        if (strstr(res, "refresh_token") != NULL) {
-            res = strtok(NULL, " "); // token value
-            res = strtok(res, "\"");
-            break;
-        }
-        res = strtok(NULL, " ");
-    }
-    return res;
-}
-
 // todo: refresh OAuth2 access token
 char* refresh_access_token(char* refresh_token) {
     return "not implemented";
@@ -154,18 +95,20 @@ void read_tokenfile() {
 
     fseek(token_file, 0, SEEK_END);
     token_bytes = ftell(token_file);
-    fseek(token_file, 0L, SEEK_SET);
+    rewind(token_file);
 
-    token_buff = (char*)calloc(token_bytes, sizeof(char));
-    fread(token_buff, sizeof(char), token_bytes, token_file);
+    token_buff = malloc(token_bytes);
+    if (token_buff != NULL) {
+        fread(token_buff, sizeof(char), token_bytes, token_file);
+
+        access_token = extract_json_value(token_buff, "access_token", true);
+        token_ttl = extract_json_value(token_buff, "expires_in", false);
+        refresh_token = extract_json_value(token_buff, "refresh_token", true);
+        fprintf(stderr, "Access token: %s\n", access_token);
+        fprintf(stderr, "Token TTL: %i\n", token_ttl);
+        fprintf(stderr, "Refresh token: %s\n", refresh_token);
+    }
     fclose(token_file);
-
-    access_token = extract_oauth_token(token_buff);
-    token_ttl = extract_oauth_token_ttl(token_buff);
-    refresh_token = extract_oauth_refresh_token(token_buff);
-    fprintf(stderr, "Access token: %s\n", access_token);
-    fprintf(stderr, "Token TTL: %i\n", token_ttl);
-    fprintf(stderr, "Refresh token: %s\n", refresh_token);
 }
 
 void get_access_token_from_code(char* code, char* verifier) {
@@ -183,11 +126,6 @@ void get_access_token_from_code(char* code, char* verifier) {
 
     curl = curl_easy_init();
 
-    // https://curl.se/libcurl/c/getinmemory.html
-    //struct curl_mem_chunk token_result;
-    //token_result.memory = malloc(1);
-    //token_result.size = 0;
-
     FILE* tokenfile;
     char* tokenfile_path;
 
@@ -195,8 +133,6 @@ void get_access_token_from_code(char* code, char* verifier) {
         curl_easy_setopt(curl, CURLOPT_URL, GOOGLE_OAUTH_TOKEN_URL);
         curl_easy_setopt(curl, CURLOPT_POSTFIELDS, postfields);
         curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, write_data);
-        //curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, curl_write_mem_callback);
-        //curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void *)&token_result);
 
         tokenfile_path = expand_path(CONFIG.google_tokenfile);
         tokenfile = fopen(tokenfile_path, "wb");
@@ -375,26 +311,83 @@ char* get_oauth_code(const char* verifier, WINDOW* header) {
     return code;
 }
 
+char* download_event(struct tm* date) {
+    CURLcode res;
+
+    curl = curl_easy_init();
+
+    // https://curl.se/libcurl/c/getinmemory.html
+    struct curl_mem_chunk event_result;
+    event_result.memory = malloc(1);
+    event_result.size = 0;
+
+    if (curl) {
+        struct curl_slist *header = NULL;
+        char bearer_token[strlen("Authorization: Bearer")+strlen(access_token)];
+
+        sprintf(bearer_token, "Authorization: Bearer %s", access_token);
+        header = curl_slist_append(header, "Depth: 0");
+        header = curl_slist_append(header, bearer_token);
+
+        char* postfields = "<d:propfind xmlns:d='DAV:' xmlns:cs='http://calendarserver.org/ns/'>"
+                           "<d:prop><d:current-user-principal/></d:prop>"
+                           "</d:propfind>";
+
+        curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, "PROPFIND");
+        curl_easy_setopt(curl, CURLOPT_URL, GOOGLE_CALDAV_URI);
+        curl_easy_setopt(curl, CURLOPT_POSTFIELDS, postfields);
+        curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, write_data);
+        curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, curl_write_mem_callback);
+        curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void *)&event_result);
+
+        res = curl_easy_perform(curl);
+
+        if (res != CURLE_OK) {
+            fprintf(stderr, "curl_easy_perform() failed: %s\n", curl_easy_strerror(res));
+        }
+
+        fprintf(stderr, "Curl retrieved %lu bytes\n", (unsigned long)event_result.size);
+        fprintf(stderr, "Curl content: %s\n", event_result.memory);
+
+        curl_easy_cleanup(curl);
+    }
+    return event_result.memory;
+}
+
+void upload_event(struct tm* date) {
+
+}
+
 void caldav_sync(struct tm* date, WINDOW* header) {
     // fetch existing API tokens
     read_tokenfile();
 
     // check if we can use the existing token
+    if (access_token == NULL) {
+        // create new verifier
+        char challenge[GOOGLE_OAUTH_CODE_VERIFIER_LENGTH];
+        random_code_challenge(GOOGLE_OAUTH_CODE_VERIFIER_LENGTH, challenge);
+        fprintf(stderr, "Challenge/Verifier: %s\n", challenge);
 
-    // create new verifier
-    char challenge[GOOGLE_OAUTH_CODE_VERIFIER_LENGTH];
-    random_code_challenge(GOOGLE_OAUTH_CODE_VERIFIER_LENGTH, challenge);
-    fprintf(stderr, "Challenge/Verifier: %s\n", challenge);
+        // fetch new code with verifier
+        char* code = get_oauth_code(challenge, header);
+        if (code == NULL) {
+            fprintf(stderr, "Error retrieving access code.\n");
+            return;
+        }
 
-    // fetch new code with verifier
-    char* code = get_oauth_code(challenge, header);
-    if (code == NULL) {
-        fprintf(stderr, "Error retrieving access code.\n");
-        return;
+        // get acess token using code and verifier
+        get_access_token_from_code(code, challenge);
     }
 
-    // get acess token using code and verifier
-    get_access_token_from_code(code, challenge);
+    char* event = download_event(date);
+    // check LAST-MODIFIED
+    fprintf(stderr, "\nEvent: %s\n\n", event);
+
+    // if local file mod time more recent than LAST-MODIFIED
+    upload_event(date);
+
+    // else persist downloaded buffer to local file
 
     char dstr[16];
     mktime(date);

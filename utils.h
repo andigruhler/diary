@@ -5,6 +5,7 @@
 #include <time.h>
 #include <string.h>
 #include <wordexp.h>
+#include <stdbool.h>
 
 #define GOOGLE_OAUTH_TOKEN_FILE "~/.diary-token"
 #ifndef GOOGLE_OAUTH_CLIENT_ID
@@ -14,6 +15,7 @@
     #define GOOGLE_OAUTH_CLIENT_SECRET ""
 #endif
 
+char* extract_json_value(char* json, char* key, bool quoted);
 char* expand_path(char* str);
 
 typedef struct

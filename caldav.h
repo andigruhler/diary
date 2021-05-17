@@ -31,6 +31,7 @@
 #define GOOGLE_OAUTH_REDIRECT_PORT 9004
 #define GOOGLE_OAUTH_REDIRECT_URI "http://" GOOGLE_OAUTH_REDIRECT_HOST ":" MKSTR(GOOGLE_OAUTH_REDIRECT_PORT)
 #define GOOGLE_OAUTH_REDIRECT_SOCKET_BACKLOG 10
+#define GOOGLE_CALDAV_URI "https://apidata.googleusercontent.com/caldav/v2"
 
 void caldav_sync(struct tm* date, WINDOW* header);
 

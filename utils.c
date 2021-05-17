@@ -1,5 +1,29 @@
 #include "utils.h"
 
+char* extract_json_value(char* json, char* key, bool quoted) {
+    // work on a copy of the json
+    char* tok = (char *) malloc(strlen(json) * sizeof(char));
+    strcpy(tok, json);
+
+    tok = strtok(json, " ");
+    while (tok != NULL) {
+        if (strstr(tok, key) != NULL) {
+            tok = strtok(NULL, " "); // value
+            break;
+        }
+        // key was not in this tok, advance tok
+        tok = strtok(NULL, " ");
+    }
+
+    // remove quotes and comma or commma only
+    if (quoted) {
+        tok = strtok(tok, "\"");
+    } else {
+        tok = strtok(tok, ",");
+    }
+    return tok;
+}
+
 // Return expanded file path
 char* expand_path(char* str) {
     char* res;
