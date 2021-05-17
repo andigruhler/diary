@@ -43,8 +43,8 @@ static size_t curl_write_mem_callback(void * contents, size_t size, size_t nmemb
 }
 
 static size_t write_data(void *ptr, size_t size, size_t nmemb, void *stream) {
-  size_t written = fwrite(ptr, size, nmemb, (FILE *)stream);
-  return written;
+    size_t written = fwrite(ptr, size, nmemb, (FILE *)stream);
+    return written;
 }
 
 // todo
@@ -77,12 +77,7 @@ char* extract_oauth_code(char* http_header) {
     return res;
 }
 
-// todo: refresh OAuth2 access token
-char* refresh_access_token(char* refresh_token) {
-    return "not implemented";
-}
-
-void read_tokenfile() {
+char* read_tokenfile() {
     FILE* token_file;
     char* token_buff;
     long token_bytes;
@@ -102,26 +97,75 @@ void read_tokenfile() {
         fread(token_buff, sizeof(char), token_bytes, token_file);
 
         access_token = extract_json_value(token_buff, "access_token", true);
-        token_ttl = extract_json_value(token_buff, "expires_in", false);
-        refresh_token = extract_json_value(token_buff, "refresh_token", true);
+
+        // our program segfaults if we supply a NULL value to atoi
+        char* token_ttl_str = extract_json_value(token_buff, "expires_in", false);
+        if (token_ttl_str == NULL) {
+            token_ttl = 0;
+        } else {
+            token_ttl = atoi(token_ttl_str);
+        }
+
+        // only update the existing refresh token if the request actually
+        // contained a valid refresh_token, i.e, if it was the initial
+        // interactive authZ request from token code confirmed by the user
+        char * new_refresh_token = extract_json_value(token_buff, "refresh_token", true);
+        if (new_refresh_token != NULL) {
+            refresh_token = new_refresh_token;
+        }
+
         fprintf(stderr, "Access token: %s\n", access_token);
         fprintf(stderr, "Token TTL: %i\n", token_ttl);
         fprintf(stderr, "Refresh token: %s\n", refresh_token);
     }
     fclose(token_file);
+    return token_buff;
 }
 
-void get_access_token_from_code(char* code, char* verifier) {
+void write_tokenfile() {
+    char* tokenfile_path = expand_path(CONFIG.google_tokenfile);
+    FILE* tokenfile = fopen(tokenfile_path, "wb");
+    if (tokenfile == NULL) {
+        perror("Failed to open tokenfile:");
+    } else {
+        char contents[1000];
+        char* tokenfile_contents = "{\n"
+        "  \"access_token\": \"%s\",\n"
+        "  \"expires_in\": %i,\n"
+        "  \"refresh_token\": \"%s\"\n"
+        "}\n";
+        sprintf(contents, tokenfile_contents,
+                access_token,
+                token_ttl,
+                refresh_token);
+        fprintf(tokenfile, contents);
+    }
+    fclose(tokenfile);
+    char* token_json = read_tokenfile();
+    fprintf(stderr, "New tokenfile contents: %s\n", token_json);
+    fprintf(stderr, "New Access token: %s\n", access_token);
+    fprintf(stderr, "New Token TTL: %i\n", token_ttl);
+    fprintf(stderr, "Refresh token: %s\n", refresh_token);
+}
+
+void get_access_token(char* code, char* verifier, bool refresh) {
     CURLcode res;
 
     char postfields[500];
-    sprintf(postfields, "client_id=%s&client_secret=%s&code=%s&code_verifier=%s&grant_type=authorization_code&redirect_uri=http://%s:%i",
-            CONFIG.google_clientid,
-            CONFIG.google_secretid,
-            code,
-            verifier,
-            ipstr,
-            GOOGLE_OAUTH_REDIRECT_PORT);
+    if (refresh) {
+        sprintf(postfields, "client_id=%s&client_secret=%s&grant_type=refresh_token&refresh_token=%s",
+                CONFIG.google_clientid,
+                CONFIG.google_secretid,
+                refresh_token);
+    } else {
+        sprintf(postfields, "client_id=%s&client_secret=%s&code=%s&code_verifier=%s&grant_type=authorization_code&redirect_uri=http://%s:%i",
+                CONFIG.google_clientid,
+                CONFIG.google_secretid,
+                code,
+                verifier,
+                ipstr,
+                GOOGLE_OAUTH_REDIRECT_PORT);
+    }
     fprintf(stderr, "CURLOPT_POSTFIELDS: %s\n", postfields);
 
     curl = curl_easy_init();
@@ -138,22 +182,28 @@ void get_access_token_from_code(char* code, char* verifier) {
         tokenfile = fopen(tokenfile_path, "wb");
         if (tokenfile == NULL) {
             perror("Failed to open tokenfile:");
-            fprintf(stderr, "Tokenfile: %s\n", tokenfile_path);
         } else {
             curl_easy_setopt(curl, CURLOPT_WRITEDATA, tokenfile);
             res = curl_easy_perform(curl);
             fclose(tokenfile);
         }
 
+        curl_easy_cleanup(curl);
+
         if (res != CURLE_OK) {
             fprintf(stderr, "curl_easy_perform() failed: %s\n", curl_easy_strerror(res));
+            return;
+        } else if (refresh) {
+            // update global variables from tokenfile
+            read_tokenfile();
+            // Make sure the refresh token is re-written and persistet
+            // to the tokenfile for further requests, becaues the
+            // is not returned by the refresh_token call:
+            // https://developers.google.com/identity/protocols/oauth2/native-app#offline
+            write_tokenfile();
         }
-
-        //fprintf(stderr, "Curl retrieved %lu bytes\n", (unsigned long)token_result.size);
-        //fprintf(stderr, "Curl content: %s\n", token_result.memory);
-
-        curl_easy_cleanup(curl);
     }
+
 }
 
 char* get_oauth_code(const char* verifier, WINDOW* header) {
@@ -311,7 +361,7 @@ char* get_oauth_code(const char* verifier, WINDOW* header) {
     return code;
 }
 
-char* download_event(struct tm* date) {
+char* get_event(struct tm* date) {
     CURLcode res;
 
     curl = curl_easy_init();
@@ -335,26 +385,30 @@ char* download_event(struct tm* date) {
 
         curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, "PROPFIND");
         curl_easy_setopt(curl, CURLOPT_URL, GOOGLE_CALDAV_URI);
+        curl_easy_setopt(curl, CURLOPT_HTTPHEADER, header);
         curl_easy_setopt(curl, CURLOPT_POSTFIELDS, postfields);
         curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, write_data);
         curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, curl_write_mem_callback);
         curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void *)&event_result);
+        // fail if not authenticated, !CURLE_OK
+        curl_easy_setopt(curl, CURLOPT_FAILONERROR, 1L);
 
         res = curl_easy_perform(curl);
 
+        curl_easy_cleanup(curl);
+
+        //fprintf(stderr, "Curl retrieved %lu bytes\n", (unsigned long)event_result.size);
+        //fprintf(stderr, "Curl content: %s\n", event_result.memory);
+
         if (res != CURLE_OK) {
             fprintf(stderr, "curl_easy_perform() failed: %s\n", curl_easy_strerror(res));
+            event_result.memory = NULL;
         }
-
-        fprintf(stderr, "Curl retrieved %lu bytes\n", (unsigned long)event_result.size);
-        fprintf(stderr, "Curl content: %s\n", event_result.memory);
-
-        curl_easy_cleanup(curl);
     }
     return event_result.memory;
 }
 
-void upload_event(struct tm* date) {
+void put_event(struct tm* date) {
 
 }
 
@@ -362,9 +416,8 @@ void caldav_sync(struct tm* date, WINDOW* header) {
     // fetch existing API tokens
     read_tokenfile();
 
-    // check if we can use the existing token
-    if (access_token == NULL) {
-        // create new verifier
+    if (access_token == NULL || refresh_token == NULL) {
+        // no access token exists yet, create new verifier
         char challenge[GOOGLE_OAUTH_CODE_VERIFIER_LENGTH];
         random_code_challenge(GOOGLE_OAUTH_CODE_VERIFIER_LENGTH, challenge);
         fprintf(stderr, "Challenge/Verifier: %s\n", challenge);
@@ -377,15 +430,25 @@ void caldav_sync(struct tm* date, WINDOW* header) {
         }
 
         // get acess token using code and verifier
-        get_access_token_from_code(code, challenge);
+        get_access_token(code, challenge, false);
     }
 
-    char* event = download_event(date);
+    // check if we can use the token from the tokenfile
+    char* event = get_event(date);
+
+    if (event == NULL) {
+        // The event could not be fetched,
+        // get new acess token with refresh token
+        get_access_token(NULL, NULL, true);
+        // Retry request for event with new token
+        event = get_event(date);
+    }
+
     // check LAST-MODIFIED
     fprintf(stderr, "\nEvent: %s\n\n", event);
 
     // if local file mod time more recent than LAST-MODIFIED
-    upload_event(date);
+    put_event(date);
 
     // else persist downloaded buffer to local file
 
