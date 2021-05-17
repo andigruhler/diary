@@ -5,7 +5,7 @@ char* extract_json_value(char* json, char* key, bool quoted) {
     char* tok = (char *) malloc(strlen(json) * sizeof(char));
     strcpy(tok, json);
 
-    tok = strtok(json, " ");
+    tok = strtok(tok, " ");
     while (tok != NULL) {
         if (strstr(tok, key) != NULL) {
             tok = strtok(NULL, " "); // value
