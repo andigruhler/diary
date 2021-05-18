@@ -17,6 +17,7 @@
 
 char* extract_json_value(char* json, char* key, bool quoted);
 char* expand_path(char* str);
+char* strrstr(char *haystack, char *needle);
 
 typedef struct
 {

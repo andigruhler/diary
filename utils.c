@@ -36,6 +36,18 @@ char* expand_path(char* str) {
     return res;
 }
 
+// Get last occurence of string in string
+// https://stackoverflow.com/questions/20213799/finding-last-occurence-of-string
+char* strrstr(char *haystack, char *needle) {
+    int nlen = strlen(needle);
+    for (char* i = haystack + strlen(haystack) - nlen; i >= haystack; i--) {
+        if (strncmp(i, needle, nlen) == 0) {
+            return i;
+        }
+    }
+    return NULL;
+}
+
 config CONFIG = {
     .range = 1,
     .weekday = 1,

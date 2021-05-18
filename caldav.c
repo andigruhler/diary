@@ -177,6 +177,7 @@ void get_access_token(char* code, char* verifier, bool refresh) {
         curl_easy_setopt(curl, CURLOPT_URL, GOOGLE_OAUTH_TOKEN_URL);
         curl_easy_setopt(curl, CURLOPT_POSTFIELDS, postfields);
         curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, write_data);
+        curl_easy_setopt(curl, CURLOPT_VERBOSE, 1);
 
         tokenfile_path = expand_path(CONFIG.google_tokenfile);
         tokenfile = fopen(tokenfile_path, "wb");
@@ -361,51 +362,124 @@ char* get_oauth_code(const char* verifier, WINDOW* header) {
     return code;
 }
 
-char* get_event(struct tm* date) {
+char* caldav_req(struct tm* date, char* url, char* postfields, int depth) {
+
+    // only support depths 0 or 1
+    if (depth < 0 || depth > 1) {
+        return NULL;
+    }
+
     CURLcode res;
 
     curl = curl_easy_init();
 
     // https://curl.se/libcurl/c/getinmemory.html
-    struct curl_mem_chunk event_result;
-    event_result.memory = malloc(1);
-    event_result.size = 0;
+    struct curl_mem_chunk caldav_resp;
+    caldav_resp.memory = malloc(1);
+    caldav_resp.size = 0;
 
     if (curl) {
-        struct curl_slist *header = NULL;
-        char bearer_token[strlen("Authorization: Bearer")+strlen(access_token)];
-
-        sprintf(bearer_token, "Authorization: Bearer %s", access_token);
-        header = curl_slist_append(header, "Depth: 0");
-        header = curl_slist_append(header, bearer_token);
-
-        char* postfields = "<d:propfind xmlns:d='DAV:' xmlns:cs='http://calendarserver.org/ns/'>"
-                           "<d:prop><d:current-user-principal/></d:prop>"
-                           "</d:propfind>";
-
-        curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, "PROPFIND");
-        curl_easy_setopt(curl, CURLOPT_URL, GOOGLE_CALDAV_URI);
-        curl_easy_setopt(curl, CURLOPT_HTTPHEADER, header);
-        curl_easy_setopt(curl, CURLOPT_POSTFIELDS, postfields);
-        curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, write_data);
-        curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, curl_write_mem_callback);
-        curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void *)&event_result);
         // fail if not authenticated, !CURLE_OK
         curl_easy_setopt(curl, CURLOPT_FAILONERROR, 1L);
+        curl_easy_setopt(curl, CURLOPT_VERBOSE, 1);
+        curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, "PROPFIND");
+        curl_easy_setopt(curl, CURLOPT_URL, url);
+        curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, write_data);
+        curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, curl_write_mem_callback);
+        curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void *)&caldav_resp);
+
+        // construct header fields
+        struct curl_slist *header = NULL;
+        char bearer_token[strlen("Authorization: Bearer")+strlen(access_token)];
+        sprintf(bearer_token, "Authorization: Bearer %s", access_token);
+        char depth_header[strlen("Depth: 0")];
+        sprintf(depth_header, "Depth: %i", depth);
+        header = curl_slist_append(header, depth_header);
+        header = curl_slist_append(header, bearer_token);
+        curl_easy_setopt(curl, CURLOPT_HTTPHEADER, header);
+
+        // set postfields, if any
+        if (postfields != NULL) {
+            curl_easy_setopt(curl, CURLOPT_POSTFIELDS, postfields);
+        }
 
         res = curl_easy_perform(curl);
 
         curl_easy_cleanup(curl);
 
-        //fprintf(stderr, "Curl retrieved %lu bytes\n", (unsigned long)event_result.size);
-        //fprintf(stderr, "Curl content: %s\n", event_result.memory);
+        //fprintf(stderr, "Curl retrieved %lu bytes\n", (unsigned long)caldav_resp.size);
+        //fprintf(stderr, "Curl content: %s\n", caldav_resp.memory);
 
         if (res != CURLE_OK) {
+            //fprintf(stderr, "Curl response: %s\n", caldav_resp.memory);
             fprintf(stderr, "curl_easy_perform() failed: %s\n", curl_easy_strerror(res));
-            event_result.memory = NULL;
+            return NULL;
         }
     }
-    return event_result.memory;
+
+    return caldav_resp.memory;
+}
+
+// return current user principal from CalDAV XML response
+char* parse_caldav_current_user_principal(char* xml) {
+    char* xml_key_pos = strstr(xml, "<D:current-user-principal>");
+    // this XML does not contain a user principal at all
+    if (xml_key_pos == NULL) {
+        return NULL;
+    }
+
+    //fprintf(stderr, "Found current-user-principal at position: %i\n", *xml_key_pos);
+
+    //<D:current-user-principal>
+    //<D:href>/caldav/v2/diary.in0rdr%40gmail.com/user</D:href>
+    char* tok = strtok(xml_key_pos, "<"); // D:current-user-principal>
+    if (tok != NULL) {
+        tok = strtok(NULL, "<"); // D:href>/caldav/v2/test%40gmail.com/user
+        fprintf(stderr, "First token: %s\n", tok);
+        tok = strstr(tok, ">"); // >/caldav/v2/test%40gmail.com/user
+        tok++; // cut >
+        char* tok_end = strrchr(tok, '/');
+        *tok_end = '\0'; // cut /user
+    }
+
+    return tok;
+}
+
+// return calendar uri from CalDAV home set XML response
+char* parse_caldav_calendar(char* xml, char* calendar) {
+    char displayname_needle[strlen(calendar) + strlen("<D:displayname></D:displayname>")];
+    sprintf(displayname_needle, "<D:displayname>%s</D:displayname>", calendar);
+    fprintf(stderr, "Displayname needle: %s\n", displayname_needle);
+    char* displayname_pos = strstr(xml, displayname_needle);
+    // this XML multistatus response does not contain the users calendar
+    if (displayname_pos == NULL) {
+        return NULL;
+    }
+
+    // <D:response>
+    //  <D:href>/caldav/v2/2fcv7j5mf38o5u2kg5tar4baao%40group.calendar.google.com/events/</D:href>
+    //  <D:propstat>
+    //   <D:status></D:status>
+    //   <D:prop>
+    //    <D:displayname>diary</D:displayname>
+    //   </D:prop>
+    //  </D:propstat>
+    // </D:response>
+
+    // shorten multistatus response and find last hyperlink
+    *displayname_pos= '\0';
+    char* href = strrstr(xml, "<D:href>");
+    if (href != NULL) {
+        //fprintf(stderr, "Found calendar href: %s\n", href);
+        href = strtok(href, "<"); // :href>/caldav/v2/aaa%40group.calendar.google.com/events/
+        if (href != NULL) {
+            href = strchr(href, '>');
+            href++; // cut >
+            //fprintf(stderr, "Found calendar href: %s\n", href);
+        }
+        return href;
+    }
+    return NULL;
 }
 
 void put_event(struct tm* date) {
@@ -433,27 +507,48 @@ void caldav_sync(struct tm* date, WINDOW* header) {
         get_access_token(code, challenge, false);
     }
 
-    // check if we can use the token from the tokenfile
-    char* event = get_event(date);
+    char* principal_postfields = "<d:propfind xmlns:d='DAV:' xmlns:cs='http://calendarserver.org/ns/'>"
+                                "<d:prop><d:current-user-principal/></d:prop>"
+                                "</d:propfind>";
 
-    if (event == NULL) {
-        // The event could not be fetched,
+
+    // check if we can use the token from the tokenfile
+    char* user_principal = caldav_req(date, GOOGLE_CALDAV_URI, principal_postfields, 0);
+
+    if (user_principal == NULL) {
+        fprintf(stderr, "Unable to fetch principal, refreshing API token.\n");
+        // The principal could not be fetched,
         // get new acess token with refresh token
         get_access_token(NULL, NULL, true);
         // Retry request for event with new token
-        event = get_event(date);
+        user_principal = caldav_req(date, GOOGLE_CALDAV_URI, principal_postfields, 0);
     }
 
-    // check LAST-MODIFIED
-    fprintf(stderr, "\nEvent: %s\n\n", event);
+    //fprintf(stderr, "\nUser Principal: %s\n\n", user_principal);
+    user_principal = parse_caldav_current_user_principal(user_principal);
+    fprintf(stderr, "\nUser Principal: %s\n\n", user_principal);
 
-    // if local file mod time more recent than LAST-MODIFIED
-    put_event(date);
+    // get the home-set of the user
+    char uri[300];
+    sprintf(uri, "%s%s", GOOGLE_API_URI, user_principal);
+    fprintf(stderr, "\nHome Set URI: %s\n\n", uri);
+    char* home_set = caldav_req(date, uri, "", 1);
+    fprintf(stderr, "\nHome Set: %s\n\n", home_set);
 
-    // else persist downloaded buffer to local file
+    // get calendar URI from the home-set
+    char* calendar = parse_caldav_calendar(home_set, CONFIG.google_calendar);
+    fprintf(stderr, "\nCalendar href: %s\n\n", calendar);
 
+    // get cursor date
     char dstr[16];
     mktime(date);
     get_date_str(date, dstr, sizeof dstr, CONFIG.fmt);
     fprintf(stderr, "\nCursor date: %s\n\n", dstr);
+
+    // fetch event for the cursor date
+
+    // check LAST-MODIFIED
+    // if local file mod time more recent than LAST-MODIFIED
+    //put_event(date);
+    // else persist downloaded buffer to local file
 }
