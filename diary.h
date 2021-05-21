@@ -40,6 +40,5 @@ void display_entry(const char* dir, size_t dir_size, const struct tm* date, WIND
 void edit_cmd(const char* dir, size_t dir_size, const struct tm* date, char** rcmd, size_t rcmd_size);
 
 bool date_has_entry(const char* dir, size_t dir_size, const struct tm* i);
-void fpath(const char* dir, size_t dir_size, const struct tm* date, char** rpath, size_t rpath_size);
 
 #endif

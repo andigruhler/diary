@@ -1,6 +1,7 @@
 #ifndef DIARY_UTILS_H
 #define DIARY_UTILS_H
 
+#include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
 #include <string.h>
@@ -18,6 +19,7 @@
 char* extract_json_value(char* json, char* key, bool quoted);
 char* expand_path(char* str);
 char* strrstr(char *haystack, char *needle);
+void fpath(const char* dir, size_t dir_size, const struct tm* date, char** rpath, size_t rpath_size);
 
 typedef struct
 {

@@ -48,6 +48,42 @@ char* strrstr(char *haystack, char *needle) {
     return NULL;
 }
 
+/* Writes file path for 'date' entry to 'rpath'. '*rpath' is NULL on error. */
+void fpath(const char* dir, size_t dir_size, const struct tm* date, char** rpath, size_t rpath_size)
+{
+    // check size of result path
+    if (dir_size + 1 > rpath_size) {
+        fprintf(stderr, "Directory path too long");
+        *rpath = NULL;
+        return;
+    }
+
+    // add path of the diary dir to result path
+    strcpy(*rpath, dir);
+
+    // check for terminating '/' in path
+    if (dir[dir_size - 1] != '/') {
+        // check size again to accommodate '/'
+        if (dir_size + 1 > rpath_size) {
+            fprintf(stderr, "Directory path too long");
+            *rpath = NULL;
+            return;
+        }
+        strcat(*rpath, "/");
+    }
+
+    char dstr[16];
+    strftime(dstr, sizeof dstr, CONFIG.fmt, date);
+
+    // append date to the result path
+    if (strlen(*rpath) + strlen(dstr) > rpath_size) {
+        fprintf(stderr, "File path too long");
+        *rpath = NULL;
+        return;
+    }
+    strcat(*rpath, dstr);
+}
+
 config CONFIG = {
     .range = 1,
     .weekday = 1,
