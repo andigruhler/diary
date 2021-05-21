@@ -1,11 +1,14 @@
 #ifndef DIARY_CALDAV_H
 #define DIARY_CALDAV_H
 
+#define __USE_XOPEN
+#define _GNU_SOURCE
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
 #include <time.h>
+#include <sys/stat.h>
 #include <sys/socket.h>
 #include <sys/poll.h>
 #include <netdb.h>

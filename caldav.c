@@ -85,7 +85,7 @@ char* read_tokenfile() {
     char* tokenfile_path = expand_path(CONFIG.google_tokenfile);
     token_file = fopen(tokenfile_path, "r");
     if (token_file == NULL) {
-        perror("Failed to open tokenfile:");
+        perror("Failed to open tokenfile");
     }
 
     fseek(token_file, 0, SEEK_END);
@@ -126,7 +126,7 @@ void write_tokenfile() {
     char* tokenfile_path = expand_path(CONFIG.google_tokenfile);
     FILE* tokenfile = fopen(tokenfile_path, "wb");
     if (tokenfile == NULL) {
-        perror("Failed to open tokenfile:");
+        perror("Failed to open tokenfile");
     } else {
         char contents[1000];
         char* tokenfile_contents = "{\n"
@@ -177,12 +177,12 @@ void get_access_token(char* code, char* verifier, bool refresh) {
         curl_easy_setopt(curl, CURLOPT_URL, GOOGLE_OAUTH_TOKEN_URL);
         curl_easy_setopt(curl, CURLOPT_POSTFIELDS, postfields);
         curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, write_data);
-        curl_easy_setopt(curl, CURLOPT_VERBOSE, 1);
+        //curl_easy_setopt(curl, CURLOPT_VERBOSE, 1);
 
         tokenfile_path = expand_path(CONFIG.google_tokenfile);
         tokenfile = fopen(tokenfile_path, "wb");
         if (tokenfile == NULL) {
-            perror("Failed to open tokenfile:");
+            perror("Failed to open tokenfile");
         } else {
             curl_easy_setopt(curl, CURLOPT_WRITEDATA, tokenfile);
             res = curl_easy_perform(curl);
@@ -255,6 +255,7 @@ char* get_oauth_code(const char* verifier, WINDOW* header) {
     int col;
     col = getmaxx(header);
     wresize(header, LINES, col);
+    // todo: make it a pad for the long link to be clickable?
     mvwprintw(header, 0, 0, "Go to Google OAuth2 authorization URI. Use 'q' or 'Ctrl+c' to quit authorization process.\n%s", uri);
     wrefresh(header);
 
@@ -307,7 +308,7 @@ char* get_oauth_code(const char* verifier, WINDOW* header) {
         int poll_count = poll(pfds, fd_count, -1);
 
         if (poll_count == -1) {
-            perror("poll");
+            perror("Erro in poll");
             break;
         }
 
@@ -362,7 +363,7 @@ char* get_oauth_code(const char* verifier, WINDOW* header) {
     return code;
 }
 
-char* caldav_req(struct tm* date, char* url, char* postfields, int depth) {
+char* caldav_req(struct tm* date, char* url, char* http_method, char* postfields, int depth) {
 
     // only support depths 0 or 1
     if (depth < 0 || depth > 1) {
@@ -381,8 +382,8 @@ char* caldav_req(struct tm* date, char* url, char* postfields, int depth) {
     if (curl) {
         // fail if not authenticated, !CURLE_OK
         curl_easy_setopt(curl, CURLOPT_FAILONERROR, 1L);
-        curl_easy_setopt(curl, CURLOPT_VERBOSE, 1);
-        curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, "PROPFIND");
+        //curl_easy_setopt(curl, CURLOPT_VERBOSE, 1);
+        curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, http_method);
         curl_easy_setopt(curl, CURLOPT_URL, url);
         curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, write_data);
         curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, curl_write_mem_callback);
@@ -513,7 +514,7 @@ void caldav_sync(struct tm* date, WINDOW* header) {
 
 
     // check if we can use the token from the tokenfile
-    char* user_principal = caldav_req(date, GOOGLE_CALDAV_URI, principal_postfields, 0);
+    char* user_principal = caldav_req(date, GOOGLE_CALDAV_URI, "PROPFIND", principal_postfields, 0);
 
     if (user_principal == NULL) {
         fprintf(stderr, "Unable to fetch principal, refreshing API token.\n");
@@ -521,34 +522,131 @@ void caldav_sync(struct tm* date, WINDOW* header) {
         // get new acess token with refresh token
         get_access_token(NULL, NULL, true);
         // Retry request for event with new token
-        user_principal = caldav_req(date, GOOGLE_CALDAV_URI, principal_postfields, 0);
+        user_principal = caldav_req(date, GOOGLE_CALDAV_URI, "PROPFIND", principal_postfields, 0);
     }
 
-    //fprintf(stderr, "\nUser Principal: %s\n\n", user_principal);
     user_principal = parse_caldav_current_user_principal(user_principal);
-    fprintf(stderr, "\nUser Principal: %s\n\n", user_principal);
+    fprintf(stderr, "\nUser Principal: %s\n", user_principal);
 
     // get the home-set of the user
     char uri[300];
     sprintf(uri, "%s%s", GOOGLE_API_URI, user_principal);
-    fprintf(stderr, "\nHome Set URI: %s\n\n", uri);
-    char* home_set = caldav_req(date, uri, "", 1);
-    fprintf(stderr, "\nHome Set: %s\n\n", home_set);
+    fprintf(stderr, "\nHome Set URI: %s\n", uri);
+    char* home_set = caldav_req(date, uri, "PROPFIND", "", 1);
+    //fprintf(stderr, "\nHome Set: %s\n", home_set);
 
     // get calendar URI from the home-set
-    char* calendar = parse_caldav_calendar(home_set, CONFIG.google_calendar);
-    fprintf(stderr, "\nCalendar href: %s\n\n", calendar);
+    char* calendar_href = parse_caldav_calendar(home_set, CONFIG.google_calendar);
+    fprintf(stderr, "\nCalendar href: %s\n", calendar_href);
 
     // get cursor date
-    char dstr[16];
-    mktime(date);
-    get_date_str(date, dstr, sizeof dstr, CONFIG.fmt);
-    fprintf(stderr, "\nCursor date: %s\n\n", dstr);
+    //char dstr[16];
+    //mktime(date);
+    //strftime(date, dstr, sizeof dstr, CONFIG.fmt);
+    //fprintf(stderr, "\nCursor date: %s\n\n", dstr);
+
+    char* xml_filter = "<c:calendar-query xmlns:d='DAV:' xmlns:c='urn:ietf:params:xml:ns:caldav'>"
+                       "<d:prop><c:calendar-data/></d:prop>"
+                       "<c:filter><c:comp-filter name='VCALENDAR'>"
+                       "<c:comp-filter name='VEVENT'>"
+                       "<c:time-range start='%s' end='%s'/></c:comp-filter>"
+                       "</c:comp-filter></c:filter></c:calendar-query>";
+
+    // construct next day from date+1
+    time_t date_time = mktime(date);
+    struct tm* next_day = localtime(&date_time);
+    next_day->tm_mday++;
+    mktime(next_day);
+
+    char dstr_cursor[30];
+    char dstr_next_day[30];
+
+    char* format = "%Y%m%dT%H%M%SZ";
+    strftime(dstr_cursor, sizeof dstr_cursor, format, date);
+    strftime(dstr_next_day, sizeof dstr_next_day, format, next_day);
+
+    char caldata_postfields[strlen(xml_filter)+50];
+    sprintf(caldata_postfields, xml_filter,
+            dstr_cursor,
+            dstr_next_day);
+    fprintf(stderr, "Calendar data postfields:\n%s\n", caldata_postfields);
 
     // fetch event for the cursor date
+    sprintf(uri, "%s%s", GOOGLE_API_URI, calendar_href);
+    fprintf(stderr, "\nCalendar URI: %s\n", uri);
+    char* event = caldav_req(date, uri, "REPORT", caldata_postfields, 0);
+    fprintf(stderr, "Event:\n%s", event);
 
-    // check LAST-MODIFIED
-    // if local file mod time more recent than LAST-MODIFIED
-    //put_event(date);
-    // else persist downloaded buffer to local file
+    // get path of entry
+    char path[100];
+    char* ppath = path;
+    fpath(CONFIG.dir, strlen(CONFIG.dir), date, &ppath, sizeof path);
+    fprintf(stderr, "Cursor date file path: %s\n", path);
+
+    bool local_file_exists = true;
+    bool remote_file_exists = true;
+
+    // check last modification time of local time
+    struct stat attr;
+    if (stat(path, &attr) != 0) {
+        perror("Stat failed");
+        local_file_exists = false;
+    }
+    fprintf(stderr, "File last modified time: %s\n", ctime(&attr.st_mtime));
+
+    struct tm remote_datetime;
+    time_t remote_date;
+
+    // check remote LAST-MODIFIED:20210521T212441Z
+    char* remote_last_mod = strstr(event, "LAST-MODIFIED:");
+    if (remote_last_mod == NULL) {
+        remote_file_exists = false;
+    } else {
+        remote_last_mod = strtok(remote_last_mod, ":");
+        remote_last_mod = strtok(NULL, "\n");
+        strptime(remote_last_mod, format, &remote_datetime);
+        remote_date = mktime(&remote_datetime);
+        fprintf(stderr, "Remote last modified: %s\n", ctime(&remote_date));
+    }
+
+    if (! (local_file_exists || remote_file_exists)) {
+        fprintf(stderr, "Neither local nor remote file exists, giving up.\n");
+        return;
+    }
+
+    double timediff = difftime(attr.st_mtime, remote_date);
+    fprintf(stderr, "Time diff between local and remote mod time:%e\n", timediff);
+
+
+    // todo: find out if no remote file exists
+    //       find out when no local file exists, 1970
+    // File last modified time: Thu Jan  1 01:00:00 1970
+    // Remote last modified: Mon Feb 13 06:31:36 89854
+
+    if (timediff > 0 && local_file_exists) {
+        // local time > remote time
+        // if local file mod time more recent than LAST-MODIFIED
+        fprintf(stderr, "Local file is newer, uploading to remote...\n");
+        //put_event(date);
+    }
+
+    if (timediff < 0 && remote_file_exists) {
+        //todo: Warn - really sync? remote is more recent and will overwrite
+        fprintf(stderr, "Remote file is newer, extracting description from remote...\n");
+        char* remote_desc = strstr(event, "DESCRIPTION:");
+        remote_desc = strtok(remote_desc, ":");
+        remote_desc = strtok(NULL, "\n");
+        fprintf(stderr, "Remote event description:%s\n", remote_desc);
+
+        // else persist downloaded buffer to local file
+        FILE* cursordate_file = fopen(path, "wb");
+        if (cursordate_file == NULL) {
+            perror("Failed to open cursor date file");
+        } else {
+            fprintf(cursordate_file, remote_desc);
+        }
+        fclose(cursordate_file);
+    }
+
+    // todo: update bold face cursor date
 }
