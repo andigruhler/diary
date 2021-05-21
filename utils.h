@@ -43,6 +43,4 @@ typedef struct
 
 config CONFIG;
 
-void get_date_str(const struct tm* date, char* date_str, size_t date_str_size, const char* fmt);
-
 #endif

@@ -85,7 +85,7 @@ void update_date(WINDOW* header)
 {
     char dstr[16];
     mktime(&curs_date);
-    get_date_str(&curs_date, dstr, sizeof dstr, CONFIG.fmt);
+    strftime(dstr, sizeof dstr, CONFIG.fmt, &curs_date);
 
     wclear(header);
     mvwaddstr(header, 0, 0, dstr);
@@ -228,7 +228,7 @@ void fpath(const char* dir, size_t dir_size, const struct tm* date, char** rpath
     }
 
     char dstr[16];
-    get_date_str(date, dstr, sizeof dstr, CONFIG.fmt);
+    strftime(dstr, sizeof dstr, CONFIG.fmt, date);
 
     // append date to the result path
     if (strlen(*rpath) + strlen(dstr) > rpath_size) {
@@ -656,7 +656,7 @@ int main(int argc, char** argv) {
                     noecho();
 
                     // ask for confirmation
-                    get_date_str(&curs_date, dstr, sizeof dstr, CONFIG.fmt);
+                    strftime(dstr, sizeof dstr, CONFIG.fmt, &curs_date);
                     mvwprintw(header, 0, 0, "Delete entry '%s'? [Y/n] ", dstr);
                     bool conf = false;
                     while (!conf) {
@@ -713,7 +713,7 @@ int main(int argc, char** argv) {
                 break;
             // Sync with CalDAV server
             case 's':
-                //get_date_str(&curs_date, dstr, sizeof dstr, CONFIG.fmt);
+                //strftime(dstr, sizeof dstr, CONFIG.fmt, &curs_date);
                 mktime(&curs_date);
                 caldav_sync(&curs_date, header);
                 break;
