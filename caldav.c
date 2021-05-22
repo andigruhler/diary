@@ -86,6 +86,7 @@ char* read_tokenfile() {
     token_file = fopen(tokenfile_path, "r");
     if (token_file == NULL) {
         perror("Failed to open tokenfile");
+        return NULL;
     }
 
     fseek(token_file, 0, SEEK_END);
