@@ -252,10 +252,7 @@ char* get_oauth_code(const char* verifier, WINDOW* header) {
 
     // Show the Google OAuth2 authorization URI in the header
     wclear(header);
-    int col;
-    col = getmaxx(header);
-    wresize(header, LINES, col);
-    // todo: make it a pad for the long link to be clickable?
+    wresize(header, LINES, getmaxx(header));
     mvwprintw(header, 0, 0, "Go to Google OAuth2 authorization URI. Use 'q' or 'Ctrl+c' to quit authorization process.\n%s", uri);
     wrefresh(header);
 
