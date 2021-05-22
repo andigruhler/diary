@@ -195,17 +195,16 @@ void get_access_token(char* code, char* verifier, bool refresh) {
         if (res != CURLE_OK) {
             fprintf(stderr, "curl_easy_perform() failed: %s\n", curl_easy_strerror(res));
             return;
-        } else if (refresh) {
-            // update global variables from tokenfile
-            read_tokenfile();
-            // Make sure the refresh token is re-written and persistet
-            // to the tokenfile for further requests, becaues the
-            // is not returned by the refresh_token call:
-            // https://developers.google.com/identity/protocols/oauth2/native-app#offline
-            write_tokenfile();
         }
+        // update global variables from tokenfile
+        // this will also init the access_token var the first time
+        read_tokenfile();
+        // Make sure the refresh token is re-written and persistet
+        // to the tokenfile for further requests, because the
+        // is not returned by the refresh_token call:
+        // https://developers.google.com/identity/protocols/oauth2/native-app#offline
+        write_tokenfile();
     }
-
 }
 
 char* get_oauth_code(const char* verifier, WINDOW* header) {
@@ -510,12 +509,13 @@ void caldav_sync(struct tm* date, WINDOW* header) {
     }
 
     char* principal_postfields = "<d:propfind xmlns:d='DAV:' xmlns:cs='http://calendarserver.org/ns/'>"
-                                "<d:prop><d:current-user-principal/></d:prop>"
-                                "</d:propfind>";
+                                 "<d:prop><d:current-user-principal/></d:prop>"
+                                 "</d:propfind>";
 
 
     // check if we can use the token from the tokenfile
     char* user_principal = caldav_req(date, GOOGLE_CALDAV_URI, "PROPFIND", principal_postfields, 0);
+    fprintf(stderr, "User principal: %s\n", user_principal);
 
     if (user_principal == NULL) {
         fprintf(stderr, "Unable to fetch principal, refreshing API token.\n");
