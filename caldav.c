@@ -484,7 +484,7 @@ void put_event(struct tm* date) {
 
 }
 
-void caldav_sync(struct tm* date, WINDOW* header) {
+void caldav_sync(struct tm* date, WINDOW* header, WINDOW* cal, int pad_pos) {
     // fetch existing API tokens
     read_tokenfile();
 
@@ -559,7 +559,7 @@ void caldav_sync(struct tm* date, WINDOW* header) {
     char dstr_cursor[30];
     char dstr_next_day[30];
 
-    char* format = "%Y%m%dT%H%M%SZ";
+    char* format = "%Y%m%dT000000Z";
     strftime(dstr_cursor, sizeof dstr_cursor, format, date);
     strftime(dstr_next_day, sizeof dstr_next_day, format, next_day);
 
@@ -574,6 +574,8 @@ void caldav_sync(struct tm* date, WINDOW* header) {
     fprintf(stderr, "\nCalendar URI: %s\n", uri);
     char* event = caldav_req(date, uri, "REPORT", caldata_postfields, 0);
     fprintf(stderr, "Event:\n%s", event);
+    // todo: warn if multiple events,
+    // multistatus has more than just one caldav:calendar-data elements
 
     // get path of entry
     char path[100];
@@ -595,14 +597,13 @@ void caldav_sync(struct tm* date, WINDOW* header) {
     struct tm remote_datetime;
     time_t remote_date;
 
-    // check remote LAST-MODIFIED:20210521T212441Z
-    char* remote_last_mod = strstr(event, "LAST-MODIFIED:");
+    // check remote LAST-MODIFIED:20210521T212441Z of remote event
+    char* remote_last_mod = extract_ical_field(event, "LAST-MODIFIED");
+    fprintf(stderr, "Remote last modified: %s\n", remote_last_mod);
     if (remote_last_mod == NULL) {
         remote_file_exists = false;
     } else {
-        remote_last_mod = strtok(remote_last_mod, ":");
-        remote_last_mod = strtok(NULL, "\n");
-        strptime(remote_last_mod, format, &remote_datetime);
+        strptime(remote_last_mod, "%Y%m%dT%H%M%SZ", &remote_datetime);
         remote_date = mktime(&remote_datetime);
         fprintf(stderr, "Remote last modified: %s\n", ctime(&remote_date));
     }
@@ -628,15 +629,19 @@ void caldav_sync(struct tm* date, WINDOW* header) {
         //put_event(date);
     }
 
+    char* remote_desc;
     if (timediff < 0 && remote_file_exists) {
         //todo: Warn - really sync? remote is more recent and will overwrite
-        fprintf(stderr, "Remote file is newer, extracting description from remote...\n");
-        char* remote_desc = strstr(event, "DESCRIPTION:");
-        remote_desc = strtok(remote_desc, ":");
-        remote_desc = strtok(NULL, "\n");
-        fprintf(stderr, "Remote event description:%s\n", remote_desc);
+        //fprintf(stderr, "Remote file is newer, extracting description from remote...\n");
 
-        // else persist downloaded buffer to local file
+        remote_desc = extract_ical_field(event, "DESCRIPTION");
+        fprintf(stderr, "Remote event description:%s\n", remote_desc);
+        if (remote_desc == NULL) {
+            fprintf(stderr, "Failed to fetch description of remote event.\n");
+            return;
+        }
+
+        // persist downloaded buffer to local file
         FILE* cursordate_file = fopen(path, "wb");
         if (cursordate_file == NULL) {
             perror("Failed to open cursor date file");
@@ -644,7 +649,10 @@ void caldav_sync(struct tm* date, WINDOW* header) {
             fprintf(cursordate_file, remote_desc);
         }
         fclose(cursordate_file);
-    }
 
-    // todo: update bold face cursor date
+        // add new entry highlight
+        chtype atrs = winch(cal) & A_ATTRIBUTES;
+        wchgat(cal, 2, atrs | A_BOLD, 0, NULL);
+        prefresh(cal, pad_pos, 0, 1, ASIDE_WIDTH, LINES - 1, ASIDE_WIDTH + CAL_WIDTH);
+    }
 }

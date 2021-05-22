@@ -16,7 +16,12 @@
     #define GOOGLE_OAUTH_CLIENT_SECRET ""
 #endif
 
+#define CAL_WIDTH 21
+#define ASIDE_WIDTH 4
+#define MAX_MONTH_HEIGHT 6
+
 char* extract_json_value(char* json, char* key, bool quoted);
+char* extract_ical_field(char* ical, char* key);
 char* expand_path(char* str);
 char* strrstr(char *haystack, char *needle);
 void fpath(const char* dir, size_t dir_size, const struct tm* date, char** rpath, size_t rpath_size);

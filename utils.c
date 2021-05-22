@@ -24,6 +24,26 @@ char* extract_json_value(char* json, char* key, bool quoted) {
     return tok;
 }
 
+char* extract_ical_field(char* ical, char* key) {
+    // work on a copy of the ical xml response
+    char* field = (char *) malloc(strlen(ical) * sizeof(char));
+    strcpy(field, ical);
+
+    field = strtok(field, "\n");
+    while (field != NULL) {
+        if (strstr(field, key) != NULL) {
+            fprintf(stderr, "field: %s\n", field);
+            field = strstr(field, ":"); // value
+            field++; // strip the ":"
+            break;
+        }
+        // key was not in this field, advance field
+        field = strtok(NULL, "\n");
+    }
+
+    return field;
+}
+
 // Return expanded file path
 char* expand_path(char* str) {
     char* res;

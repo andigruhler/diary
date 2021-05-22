@@ -679,7 +679,7 @@ int main(int argc, char** argv) {
             case 's':
                 //strftime(dstr, sizeof dstr, CONFIG.fmt, &curs_date);
                 mktime(&curs_date);
-                caldav_sync(&curs_date, header);
+                caldav_sync(&curs_date, header, cal, pad_pos);
                 break;
         }
 
