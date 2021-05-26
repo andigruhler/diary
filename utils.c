@@ -24,24 +24,70 @@ char* extract_json_value(char* json, char* key, bool quoted) {
     return tok;
 }
 
-char* extract_ical_field(char* ical, char* key) {
-    // work on a copy of the ical xml response
-    char* field = (char *) malloc(strlen(ical) * sizeof(char));
-    strcpy(field, ical);
+char* unfold(const char* str) {
+    // work on a copy of the str
+    char* res = (char *) malloc(strlen(str) * sizeof(char));
+    strcpy(res, str);
 
-    field = strtok(field, "\n");
-    while (field != NULL) {
-        if (strstr(field, key) != NULL) {
-            fprintf(stderr, "field: %s\n", field);
-            field = strstr(field, ":"); // value
-            field++; // strip the ":"
-            break;
-        }
-        // key was not in this field, advance field
-        field = strtok(NULL, "\n");
+    res = strtok(res, "\n");
+
+    char* buf = malloc(strlen(res));
+    strcpy(buf, res);
+
+    regex_t re;
+    regmatch_t pm[1];
+
+    if (regcomp(&re, "^[^ \t]", 0) != 0) {
+        perror("Failed to compile regex");
+        return NULL;
     }
 
-    return field;
+    while (res != NULL) {
+        res = strtok(NULL, "\n");
+
+        if (regexec(&re, res, 1, pm, 0) == 0) {
+            // Stop unfolding if line does not start with white space/tab:
+            // https://datatracker.ietf.org/doc/html/rfc2445#section-4.1
+            break;
+        }
+
+        buf = realloc(buf, strlen(buf) + strlen(res));
+        if (buf != NULL) {
+            strcat(buf, res + 1);
+        } else {
+            perror("realloc failed");
+            return NULL;
+	    }
+    }
+
+    regfree(&re);
+    //free(buf);
+    return buf;
+}
+
+char* extract_ical_field(const char* ics, char* key, bool multiline) {
+    // work on a copy of the ical xml response
+    char* field = (char *) malloc(strlen(ics) * sizeof(char));
+    strcpy(field, ics);
+
+    char* res = strtok(field, "\n");
+
+    while (res != NULL) {
+        if (strstr(res, key) != NULL) {
+            res = strstr(res, ":"); // value
+            res++; // strip the ":"
+            break;
+        }
+        // key not in this line, advance line
+        res = strtok(NULL, "\n");
+    }
+
+    if (multiline) {
+        res = unfold(ics + (res - field));
+    }
+
+    free(field);
+    return res;
 }
 
 // Return expanded file path

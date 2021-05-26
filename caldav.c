@@ -598,7 +598,7 @@ void caldav_sync(struct tm* date, WINDOW* header, WINDOW* cal, int pad_pos) {
     time_t remote_date;
 
     // check remote LAST-MODIFIED:20210521T212441Z of remote event
-    char* remote_last_mod = extract_ical_field(event, "LAST-MODIFIED");
+    char* remote_last_mod = extract_ical_field(event, "LAST-MODIFIED", false);
     fprintf(stderr, "Remote last modified: %s\n", remote_last_mod);
     if (remote_last_mod == NULL) {
         remote_file_exists = false;
@@ -629,14 +629,14 @@ void caldav_sync(struct tm* date, WINDOW* header, WINDOW* cal, int pad_pos) {
         //put_event(date);
     }
 
-    char* remote_desc;
+    char* rmt_desc;
     if (timediff < 0 && remote_file_exists) {
         //todo: Warn - really sync? remote is more recent and will overwrite
         //fprintf(stderr, "Remote file is newer, extracting description from remote...\n");
 
-        remote_desc = extract_ical_field(event, "DESCRIPTION");
-        fprintf(stderr, "Remote event description:%s\n", remote_desc);
-        if (remote_desc == NULL) {
+        rmt_desc = extract_ical_field(event, "DESCRIPTION", true);
+        fprintf(stderr, "Remote event description:%s\n", rmt_desc);
+        if (rmt_desc == NULL) {
             fprintf(stderr, "Failed to fetch description of remote event.\n");
             return;
         }
@@ -646,7 +646,16 @@ void caldav_sync(struct tm* date, WINDOW* header, WINDOW* cal, int pad_pos) {
         if (cursordate_file == NULL) {
             perror("Failed to open cursor date file");
         } else {
-            fprintf(cursordate_file, remote_desc);
+            for (char* i = rmt_desc; *i != '\0'; i++) {
+                if (rmt_desc[i-rmt_desc] == 0x5C) { // backslash
+                    if (*(i+1) == 'n') {
+                        fputc('\n', cursordate_file);
+                        i++;
+                    }
+                } else {
+                    fputc(*i, cursordate_file);
+                }
+            }
         }
         fclose(cursordate_file);
 

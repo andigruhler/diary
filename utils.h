@@ -1,6 +1,7 @@
 #ifndef DIARY_UTILS_H
 #define DIARY_UTILS_H
 
+#include <regex.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
@@ -21,7 +22,7 @@
 #define MAX_MONTH_HEIGHT 6
 
 char* extract_json_value(char* json, char* key, bool quoted);
-char* extract_ical_field(char* ical, char* key);
+char* extract_ical_field(const char* ical, char* key, bool multline);
 char* expand_path(char* str);
 char* strrstr(char *haystack, char *needle);
 void fpath(const char* dir, size_t dir_size, const struct tm* date, char** rpath, size_t rpath_size);
