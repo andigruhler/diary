@@ -592,7 +592,8 @@ void caldav_sync(struct tm* date, WINDOW* header, WINDOW* cal, int pad_pos) {
         perror("Stat failed");
         local_file_exists = false;
     }
-    fprintf(stderr, "File last modified time: %s\n", ctime(&attr.st_mtime));
+    fprintf(stderr, "Local file last modified time: %s\n", ctime(&attr.st_mtime));
+    fprintf(stderr, "Local file last modified time: %li\n", attr.st_mtime);
 
     struct tm remote_datetime;
     time_t remote_date;
@@ -622,7 +623,7 @@ void caldav_sync(struct tm* date, WINDOW* header, WINDOW* cal, int pad_pos) {
     // File last modified time: Thu Jan  1 01:00:00 1970
     // Remote last modified: Mon Feb 13 06:31:36 89854
 
-    if (timediff > 0 && local_file_exists) {
+    if ((timediff > 0 && local_file_exists) || (local_file_exists && !remote_file_exists)) {
         // local time > remote time
         // if local file mod time more recent than LAST-MODIFIED
         fprintf(stderr, "Local file is newer, uploading to remote...\n");
@@ -630,9 +631,9 @@ void caldav_sync(struct tm* date, WINDOW* header, WINDOW* cal, int pad_pos) {
     }
 
     char* rmt_desc;
-    if (timediff < 0 && remote_file_exists) {
+    if ((timediff < 0 && remote_file_exists) || (!local_file_exists && remote_file_exists)) {
         //todo: Warn - really sync? remote is more recent and will overwrite
-        //fprintf(stderr, "Remote file is newer, extracting description from remote...\n");
+        fprintf(stderr, "Remote file is newer, extracting description from remote...\n");
 
         rmt_desc = extract_ical_field(event, "DESCRIPTION", true);
         fprintf(stderr, "Remote event description:%s\n", rmt_desc);
@@ -648,9 +649,15 @@ void caldav_sync(struct tm* date, WINDOW* header, WINDOW* cal, int pad_pos) {
         } else {
             for (char* i = rmt_desc; *i != '\0'; i++) {
                 if (rmt_desc[i-rmt_desc] == 0x5C) { // backslash
-                    if (*(i+1) == 'n') {
-                        fputc('\n', cursordate_file);
-                        i++;
+                    switch (*(i+1)) {
+                        case 'n':
+                            fputc('\n', cursordate_file);
+                            i++;
+                            break;
+                        case 0x5c: // preserve real backslash
+                            fputc(0x5c, cursordate_file);
+                            i++;
+                            break;
                     }
                 } else {
                     fputc(*i, cursordate_file);
