@@ -73,6 +73,8 @@ Server = https://downloadcontent.opensuse.org/repositories/home:/in0rdr/Arch/$ar
     export GOOGLE_OAUTH_CLIENT_SECRET=""
     ```
 
+    Alternatively, leave these two variables unset and [define the clientid/secret in the configuration file](#Google-Calendar-OAuth2) at run-time.
+
 2. Compile (requires ncurses and libcurl):
     ```
     make
@@ -101,10 +103,14 @@ The file `${XDG_CONFIG_HOME:-~/.config}/diary/diary.cfg` should adhere to a basi
 | Command Line Option | Config Key | Example Config Value | Default Config Value | Description |
 | --- | --- | --- | --- | --- |
 | `--dir`, `-d`, or first non-option argument | `dir` | ~/diary | n/a | Diary directory. Path that holds the journal text files. If unset, defaults to environment variable `$DIARY_DIR`.|
-| `--editor` or `-e` | `editor` | "vim" | "" | Editor to open journal files with. If unset, defaults to environment variable `$EDITOR`. If no editor is provided, the diary is opened read-only. |
+| `--editor` or `-e` | `editor` | vim | (empty) | Editor to open journal files with. If unset, defaults to environment variable `$EDITOR`. If no editor is provided, the diary is opened read-only. |
 | `--fmt` or `-f` | `fmt` | %d_%b_%y | %Y-%m-%d | Date format and file name for the files inside the `dir`. For the format specifiers, see [`man strftime`](https://man7.org/linux/man-pages/man3/strftime.3.html). Be careful: If you change this, you might no longer find your existing diary entries, because the diary assumes to find the journal files under another file name. Hence, a change in FMT shows an empty diary, at first. Rename all files in the DIARY_DIR to migrate to a new FMT. |
 | `--range` or `-r` | `range` | 10 | 1 | Number of years to show before/after todays date |
 | `--weekday` or `-w` | `weekday` | 0 | 1 | First weekday, `7` = Sunday, `1` = Monday, ..., `6` = Saturday. Use `7` (or `0`) to display week beginning at Sunday ("S-M-T-W-T-F-S"), or `1` for "M-T-W-T-F-S-S". If `glibc` is installed, the first day of the week is derived from the current locale setting (`$LANG`, see `man locale`). Without `glibc`, the first weekday defaults to 1 (Monday), unless specified otherwise with this option. |
+| n/a | `google_calendar` | diary | (empty) | Displayname of Google Calendar for [CalDAV sync](#CalDAV-sync) |
+| n/a | `google_clientid` | 123-123.apps.googleusercontent.com | [built-in](#Build) / (empty) | Google Calendar for [Google Calendar OAuth2](#Google-Calendar-OAuth2) clientid |
+| n/a | `google_secretid` | 321 | [built-in](#Build) / (empty) |  Google Calendar for [Google Calendar OAuth2](#Google-Calendar-OAuth2) secretid |
+| n/a | `google_tokenfile` | ~/.diary-token | ~/.diary-token | Displayname of Google Calendar for [Google Calendar OAuth2](#Google-Calendar-OAuth2) API token file|
 
 ## Precedence Rules
 <a name="precedence_rules"></a>
@@ -143,4 +149,36 @@ $ rm ${XDG_CONFIG_HOME:-~/.config}/diary/diary.cfg
 
 # start with 'weekday' default value from source code (1=Mon)
 $ diary
+```
+
+## CalDAV Sync
+The journal files can be synced via CalDAV. Currently, only the Google Calendar is supported as remote provider. Please open an [issue](https://github.com/in0rdr/diary/issues) to implement support for additional remote calendar servers.
+
+
+The calender for synchronization can be defined with the [configuration](#Configuration-File) key `google_calendar`:
+```
+# Google calendar name for CalDAV sync
+google_calendar = example
+```
+
+This key is empty by default and the only configuration key required for setting up synchronization.
+
+### Google Calendar OAuth2
+
+The Google Calendar CalDAV API is protected with OAuth2.
+
+The [packaged binaries](#Install) ship with predefined app credentials (clientid/secretid) and consent screen.
+
+The credentials and the consent screen can be redefined at [compile time](#Build) or with the following keys in the [configuration file](#Configuration-File):
+
+```
+# Google OAuth2 clientid and secretid
+google_clientid = 123-123.apps.googleusercontent.com
+google_secretid = 321
+```
+
+The token used to authenticate with the Google API is stored in the file specified by `google_tokenfile` (defaults to `~/.diary-token`):
+```
+# Google OAuth2 tokenfile
+google_tokenfile = ~/.diary-token
 ```
