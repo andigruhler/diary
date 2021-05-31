@@ -150,8 +150,9 @@ void write_tokenfile() {
     chmod(tokenfile_path, S_IRUSR|S_IWUSR);
     perror("chmod");
 
-    char* token_json = read_tokenfile();
-    fprintf(stderr, "New tokenfile contents: %s\n", token_json);
+    char* tokfile = read_tokenfile();
+    free(tokfile);
+    fprintf(stderr, "New tokenfile contents: %s\n", tokfile);
     fprintf(stderr, "New Access token: %s\n", access_token);
     fprintf(stderr, "New Token TTL: %i\n", token_ttl);
     fprintf(stderr, "Refresh token: %s\n", refresh_token);
@@ -159,6 +160,7 @@ void write_tokenfile() {
 
 void get_access_token(char* code, char* verifier, bool refresh) {
     CURLcode res;
+    char* tokfile;
 
     char postfields[500];
     if (refresh) {
@@ -208,7 +210,8 @@ void get_access_token(char* code, char* verifier, bool refresh) {
         }
         // update global variables from tokenfile
         // this will also init the access_token var the first time
-        read_tokenfile();
+        tokfile = read_tokenfile();
+        free(tokfile);
         // Make sure the refresh token is re-written and persistet
         // to the tokenfile for further requests, because the
         // is not returned by the refresh_token call:
@@ -502,7 +505,8 @@ void put_event(struct tm* date) {
 
 void caldav_sync(struct tm* date, WINDOW* header, WINDOW* cal, int pad_pos) {
     // fetch existing API tokens
-    read_tokenfile();
+    char* tokfile = read_tokenfile();
+    free(tokfile);
 
     if (access_token == NULL && refresh_token == NULL) {
         // no access token exists yet, create new verifier
