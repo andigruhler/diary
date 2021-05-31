@@ -111,7 +111,7 @@ char* read_tokenfile() {
         // only update the existing refresh token if the request actually
         // contained a valid refresh_token, i.e, if it was the initial
         // interactive authZ request from token code confirmed by the user
-        char * new_refresh_token = extract_json_value(token_buff, "refresh_token", true);
+        char* new_refresh_token = extract_json_value(token_buff, "refresh_token", true);
         if (new_refresh_token != NULL) {
             refresh_token = new_refresh_token;
         }
@@ -537,7 +537,9 @@ void caldav_sync(struct tm* date, WINDOW* header, WINDOW* cal, int pad_pos) {
     if (user_principal == NULL) {
         // todo: automatically remove tokenfile and retry until success?
         fprintf(stderr, "Unable to fetch principal, invalid tokenfile. Please delete '%s' and retry.\n", CONFIG.google_tokenfile);
+        free(access_token);
         access_token = NULL;
+        free(refresh_token);
         refresh_token = NULL;
         return;
     }
