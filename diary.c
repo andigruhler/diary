@@ -311,7 +311,7 @@ bool read_config(const char* file_path)
 void usage() {
   printf("Usage : diary [OPTION]... [DIRECTORY]...\n");
   printf("\n");
-  printf("Simple CLI diary (v%s)\n", DIARY_VERSION);
+  printf("Diary, journaling TUI (v%s)\n", DIARY_VERSION);
   printf("Edit journal entries from the command line\n");
   printf("\n");
   printf("Options:\n");
@@ -686,9 +686,10 @@ int main(int argc, char** argv) {
         if (mv_valid) {
             update_date(header);
 
-            // adjust prev width (if terminal was resized in the mean time)
+            // adjust prev and header width (if terminal was resized in the mean time)
             prev_width = COLS - ASIDE_WIDTH - CAL_WIDTH;
             wresize(prev, prev_height, prev_width);
+            wresize(header, 1, prev_width);
 
             // read the diary
             display_entry(CONFIG.dir, diary_dir_size, &curs_date, prev, prev_width);
