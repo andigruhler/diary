@@ -84,6 +84,10 @@ char* read_tokenfile() {
 
     char* tokenfile_path = expand_path(CONFIG.google_tokenfile);
     token_file = fopen(tokenfile_path, "r");
+
+    chmod(tokenfile_path, S_IRUSR|S_IWUSR);
+    perror("chmod");
+
     if (token_file == NULL) {
         perror("Failed to open tokenfile");
         return NULL;
@@ -521,6 +525,14 @@ void caldav_sync(struct tm* date, WINDOW* header, WINDOW* cal, int pad_pos) {
         get_access_token(NULL, NULL, true);
         // Retry request for event with new token
         user_principal = caldav_req(date, GOOGLE_CALDAV_URI, "PROPFIND", principal_postfields, 0);
+    }
+
+    if (user_principal == NULL) {
+        // todo: automatically remove tokenfile and retry until success?
+        fprintf(stderr, "Unable to fetch principal, invalid refresh token, please delete '%s' and retry.\n", CONFIG.google_tokenfile);
+        access_token = NULL;
+        refresh_token = NULL;
+        return;
     }
 
     user_principal = parse_caldav_current_user_principal(user_principal);
