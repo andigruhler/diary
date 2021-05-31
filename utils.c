@@ -2,10 +2,10 @@
 
 char* extract_json_value(char* json, char* key, bool quoted) {
     // work on a copy of the json
-    char* tok = (char *) malloc(strlen(json) * sizeof(char));
-    strcpy(tok, json);
+    char* jsoncp = (char*) malloc(strlen(json) * sizeof(char));
+    strcpy(jsoncp, json);
 
-    tok = strtok(tok, " ");
+    char* tok = strtok(jsoncp, " ");
     while (tok != NULL) {
         if (strstr(tok, key) != NULL) {
             tok = strtok(NULL, " "); // value
@@ -21,7 +21,11 @@ char* extract_json_value(char* json, char* key, bool quoted) {
     } else {
         tok = strtok(tok, ",");
     }
-    return tok;
+
+    char* res = (char*) malloc(strlen(tok) * sizeof(char));
+    strcpy(res, tok);
+    free(jsoncp);
+    return res;
 }
 
 char* unfold(const char* str) {
