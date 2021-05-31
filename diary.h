@@ -8,7 +8,6 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <stdlib.h>
-#include <wordexp.h>
 #include <unistd.h>
 #include <getopt.h>
 #include <string.h>
