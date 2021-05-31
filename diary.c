@@ -12,8 +12,7 @@ struct tm cal_end;
 // unless it is divisible by 400
 #define is_leap(yr) ((yr % 400 == 0) || (yr % 4 == 0 && yr % 100 != 0))
 
-void setup_cal_timeframe()
-{
+void setup_cal_timeframe() {
     raw_time = time(NULL);
     localtime_r(&raw_time, &today);
     curs_date = today;
@@ -39,8 +38,7 @@ void setup_cal_timeframe()
     mktime(&cal_end);
 }
 
-void draw_wdays(WINDOW* head)
-{
+void draw_wdays(WINDOW* head) {
     int i;
     for (i = CONFIG.weekday; i < CONFIG.weekday + 7; i++) {
         waddstr(head, WEEKDAYS[i % 7]);
@@ -49,8 +47,7 @@ void draw_wdays(WINDOW* head)
     wrefresh(head);
 }
 
-void draw_calendar(WINDOW* number_pad, WINDOW* month_pad, const char* diary_dir, size_t diary_dir_size)
-{
+void draw_calendar(WINDOW* number_pad, WINDOW* month_pad, const char* diary_dir, size_t diary_dir_size) {
     struct tm i = cal_start;
     char month[10];
     bool has_entry;
@@ -81,8 +78,7 @@ void draw_calendar(WINDOW* number_pad, WINDOW* month_pad, const char* diary_dir,
 }
 
 /* Update the header with the cursor date */
-void update_date(WINDOW* header)
-{
+void update_date(WINDOW* header) {
     char dstr[16];
     mktime(&curs_date);
     strftime(dstr, sizeof dstr, CONFIG.fmt, &curs_date);
@@ -92,8 +88,7 @@ void update_date(WINDOW* header)
     wrefresh(header);
 }
 
-bool go_to(WINDOW* calendar, WINDOW* aside, time_t date, int* cur_pad_pos)
-{
+bool go_to(WINDOW* calendar, WINDOW* aside, time_t date, int* cur_pad_pos) {
     if (date < mktime(&cal_start) || date > mktime(&cal_end))
         return false;
 
@@ -128,8 +123,7 @@ bool go_to(WINDOW* calendar, WINDOW* aside, time_t date, int* cur_pad_pos)
 }
 
 /* Update window 'win' with diary entry from date 'date' */
-void display_entry(const char* dir, size_t dir_size, const struct tm* date, WINDOW* win, int width)
-{
+void display_entry(const char* dir, size_t dir_size, const struct tm* date, WINDOW* win, int width) {
     char path[100];
     char* ppath = path;
     int c;
@@ -157,8 +151,7 @@ void display_entry(const char* dir, size_t dir_size, const struct tm* date, WIND
 }
 
 /* Writes edit command for 'date' entry to 'rcmd'. '*rcmd' is NULL on error. */
-void edit_cmd(const char* dir, size_t dir_size, const struct tm* date, char** rcmd, size_t rcmd_size)
-{
+void edit_cmd(const char* dir, size_t dir_size, const struct tm* date, char** rcmd, size_t rcmd_size) {
     // set the edit command to env editor
     if (strlen(CONFIG.editor) + 2 > rcmd_size) {
         fprintf(stderr, "Binary path of default editor too long");
@@ -187,8 +180,7 @@ void edit_cmd(const char* dir, size_t dir_size, const struct tm* date, char** rc
     strcat(*rcmd, path);
 }
 
-bool date_has_entry(const char* dir, size_t dir_size, const struct tm* i)
-{
+bool date_has_entry(const char* dir, size_t dir_size, const struct tm* i) {
     char epath[100];
     char* pepath = epath;
 
@@ -212,8 +204,7 @@ bool date_has_entry(const char* dir, size_t dir_size, const struct tm* i)
 struct tm find_closest_entry(const struct tm current,
                              bool search_backwards,
                              const char* diary_dir,
-                             size_t diary_dir_size)
-{
+                             size_t diary_dir_size) {
     time_t end_time = mktime(&cal_end);
     time_t start_time = mktime(&cal_start);
 
@@ -234,8 +225,7 @@ struct tm find_closest_entry(const struct tm current,
     return current;
 }
 
-bool read_config(const char* file_path)
-{
+bool read_config(const char* file_path) {
     char* expaned_value;
     char config_file_path[256];
 
