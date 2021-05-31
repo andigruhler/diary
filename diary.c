@@ -236,17 +236,12 @@ struct tm find_closest_entry(const struct tm current,
 
 bool read_config(const char* file_path)
 {
-    wordexp_t config_file_path_wordexp;
+    char* expaned_value;
     char config_file_path[256];
 
-    if ( wordexp( file_path, &config_file_path_wordexp, 0 ) == 0) {
-        if (strlen(config_file_path_wordexp.we_wordv[0]) + 1 > sizeof config_file_path) {
-            fprintf(stderr, "Config file path '%s' too long\n", config_file_path_wordexp.we_wordv[0]);
-            return false;
-        }
-        strcpy(config_file_path, config_file_path_wordexp.we_wordv[0]);
-    }
-    wordfree(&config_file_path_wordexp);
+    expaned_value = expand_path(file_path);
+    strcpy(config_file_path, expaned_value);
+    free(expaned_value);
 
     // check if config file is readable
     if( access( config_file_path, R_OK ) != 0 ) {
@@ -257,7 +252,6 @@ bool read_config(const char* file_path)
     char key_buf[80];
     char value_buf[80];
     char line[256];
-    char* expaned_value;
     FILE * pfile;
 
     // read config file line by line

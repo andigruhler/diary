@@ -91,7 +91,7 @@ char* extract_ical_field(const char* ics, char* key, bool multiline) {
 }
 
 // Return expanded file path
-char* expand_path(char* str) {
+char* expand_path(const char* str) {
     char* res;
     wordexp_t str_wordexp;
     if ( wordexp( str, &str_wordexp, 0 ) == 0) {
