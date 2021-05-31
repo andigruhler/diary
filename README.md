@@ -24,9 +24,12 @@ This is a text-based diary, inspired by [khal](https://github.com/pimutils/khal)
 3. Use the keypad or VIM-like shortcuts to move between dates:
 
     ```
-    e, Enter  edit   current entry
+    e, Enter  edit current entry
     d, x      delete current entry
-    s         sync   current entry with CalDAV server
+    s         sync current entry with CalDAV server
+
+    t         jump to today
+    f         jump to or find specific day
 
     j, down   go forward by 1 week
     k, up     go backward by 1 week
@@ -34,9 +37,6 @@ This is a text-based diary, inspired by [khal](https://github.com/pimutils/khal)
     l, right  go right by 1 day
     J         go forward by 1 month
     K         go backward by 1 month
-
-    t         jump to today
-    f         jump to or find specific day
 
     N         go to the previous journal entry
     n         go to the next journal entry
