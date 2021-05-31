@@ -1,6 +1,6 @@
 #include "utils.h"
 
-char* extract_json_value(char* json, char* key, bool quoted) {
+char* extract_json_value(const char* json, char* key, bool quoted) {
     // work on a copy of the json
     char* jsoncp = (char*) malloc(strlen(json) * sizeof(char));
     strcpy(jsoncp, json);

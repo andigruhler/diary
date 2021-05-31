@@ -21,7 +21,7 @@
 #define ASIDE_WIDTH 4
 #define MAX_MONTH_HEIGHT 6
 
-char* extract_json_value(char* json, char* key, bool quoted);
+char* extract_json_value(const char* json, char* key, bool quoted);
 char* extract_ical_field(const char* ical, char* key, bool multline);
 char* expand_path(const char* str);
 char* strrstr(char *haystack, char *needle);
