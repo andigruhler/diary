@@ -372,6 +372,12 @@ char* caldav_req(struct tm* date, char* url, char* http_method, char* postfields
         return NULL;
     }
 
+    // if access_token is NULL, the program segfaults
+    // while construcing the bearer_token below
+    if (access_token == NULL) {
+        return NULL;
+    }
+
     CURLcode res;
 
     curl = curl_easy_init();
@@ -493,7 +499,7 @@ void caldav_sync(struct tm* date, WINDOW* header, WINDOW* cal, int pad_pos) {
     // fetch existing API tokens
     read_tokenfile();
 
-    if (access_token == NULL || refresh_token == NULL) {
+    if (access_token == NULL && refresh_token == NULL) {
         // no access token exists yet, create new verifier
         char challenge[GOOGLE_OAUTH_CODE_VERIFIER_LENGTH];
         random_code_challenge(GOOGLE_OAUTH_CODE_VERIFIER_LENGTH, challenge);
@@ -530,7 +536,7 @@ void caldav_sync(struct tm* date, WINDOW* header, WINDOW* cal, int pad_pos) {
 
     if (user_principal == NULL) {
         // todo: automatically remove tokenfile and retry until success?
-        fprintf(stderr, "Unable to fetch principal, invalid refresh token, please delete '%s' and retry.\n", CONFIG.google_tokenfile);
+        fprintf(stderr, "Unable to fetch principal, invalid tokenfile. Please delete '%s' and retry.\n", CONFIG.google_tokenfile);
         access_token = NULL;
         refresh_token = NULL;
         return;
