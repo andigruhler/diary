@@ -101,7 +101,7 @@ char* read_tokenfile() {
 
         access_token = extract_json_value(token_buff, "access_token", true);
 
-        // our program segfaults if we supply a NULL value to atoi
+        // program segfaults if NULL value is provided to atoi
         char* token_ttl_str = extract_json_value(token_buff, "expires_in", false);
         if (token_ttl_str == NULL) {
             token_ttl = 0;
