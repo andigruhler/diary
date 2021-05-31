@@ -22,8 +22,12 @@ char* extract_json_value(const char* json, char* key, bool quoted) {
         tok = strtok(tok, ",");
     }
 
-    char* res = (char*) malloc(strlen(tok) * sizeof(char));
-    strcpy(res, tok);
+    char* res = NULL;
+    if (tok != NULL) {
+        res = (char*) malloc(strlen(tok) * sizeof(char));
+        strcpy(res, tok);
+    }
+
     free(jsoncp);
     return res;
 }
