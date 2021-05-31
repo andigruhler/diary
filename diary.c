@@ -257,6 +257,7 @@ bool read_config(const char* file_path)
     char key_buf[80];
     char value_buf[80];
     char line[256];
+    char* expaned_value;
     FILE * pfile;
 
     // read config file line by line
@@ -267,13 +268,9 @@ bool read_config(const char* file_path)
 
         if (sscanf(line, "%s = %s", key_buf, value_buf) == 2) {
             if (strcmp("dir", key_buf) == 0) {
-                wordexp_t diary_dir_wordexp;
-                if ( wordexp( value_buf, &diary_dir_wordexp, 0 ) == 0) {
-                    // set expanded diary directory path from config file
-                    CONFIG.dir = (char *) calloc(strlen(diary_dir_wordexp.we_wordv[0]) + 1, sizeof(char));
-                    strcpy(CONFIG.dir, diary_dir_wordexp.we_wordv[0]);
-                }
-                wordfree(&diary_dir_wordexp);
+                expaned_value = expand_path(value_buf);
+                strcpy(CONFIG.dir, expaned_value);
+                free(expaned_value);
             } else if (strcmp("range", key_buf) == 0) {
                 CONFIG.range = atoi(value_buf);
             } else if (strcmp("weekday", key_buf) == 0) {
@@ -285,13 +282,9 @@ bool read_config(const char* file_path)
                 CONFIG.editor = (char *) malloc(strlen(value_buf) + 1 * sizeof(char));
                 strcpy(CONFIG.editor, value_buf);
             } else if (strcmp("google_tokenfile", key_buf) == 0) {
-                wordexp_t tokenfile_wordexp;
-                if ( wordexp( value_buf, &tokenfile_wordexp, 0 ) == 0) {
-                    // set expanded tokenfile path from config file
-                    CONFIG.google_tokenfile = (char *) calloc(strlen(tokenfile_wordexp.we_wordv[0]) + 1, sizeof(char));
-                    strcpy(CONFIG.google_tokenfile, tokenfile_wordexp.we_wordv[0]);
-                }
-                wordfree(&tokenfile_wordexp);
+                expaned_value = expand_path(value_buf);
+                strcpy(CONFIG.google_tokenfile, expaned_value);
+                free(expaned_value);
             } else if (strcmp("google_clientid", key_buf) == 0) {
                 CONFIG.google_clientid = (char *) malloc(strlen(value_buf) + 1 * sizeof(char));
                 strcpy(CONFIG.google_clientid, value_buf);

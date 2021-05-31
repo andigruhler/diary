@@ -26,10 +26,10 @@ char* extract_json_value(char* json, char* key, bool quoted) {
 
 char* unfold(const char* str) {
     // work on a copy of the str
-    char* res = (char *) malloc(strlen(str) * sizeof(char));
-    strcpy(res, str);
+    char* strcp = (char *) malloc(strlen(str) * sizeof(char));
+    strcpy(strcp, str);
 
-    res = strtok(res, "\n");
+    char* res = strtok(strcp, "\n");
 
     char* buf = malloc(strlen(res));
     strcpy(buf, res);
@@ -61,7 +61,7 @@ char* unfold(const char* str) {
     }
 
     regfree(&re);
-    //free(buf);
+    free(strcp);
     return buf;
 }
 

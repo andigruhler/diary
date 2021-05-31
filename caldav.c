@@ -84,6 +84,7 @@ char* read_tokenfile() {
 
     char* tokenfile_path = expand_path(CONFIG.google_tokenfile);
     token_file = fopen(tokenfile_path, "r");
+    free(tokenfile_path);
 
     if (token_file == NULL) {
         perror("Failed to open tokenfile");
@@ -127,6 +128,8 @@ char* read_tokenfile() {
 void write_tokenfile() {
     char* tokenfile_path = expand_path(CONFIG.google_tokenfile);
     FILE* tokenfile = fopen(tokenfile_path, "wb");
+    free(tokenfile_path);
+
     if (tokenfile == NULL) {
         perror("Failed to open tokenfile");
     } else {
@@ -187,6 +190,8 @@ void get_access_token(char* code, char* verifier, bool refresh) {
 
         tokenfile_path = expand_path(CONFIG.google_tokenfile);
         tokenfile = fopen(tokenfile_path, "wb");
+        free(tokenfile_path);
+
         if (tokenfile == NULL) {
             perror("Failed to open tokenfile");
         } else {
@@ -692,4 +697,5 @@ void caldav_sync(struct tm* date, WINDOW* header, WINDOW* cal, int pad_pos) {
         wchgat(cal, 2, atrs | A_BOLD, 0, NULL);
         prefresh(cal, pad_pos, 0, 1, ASIDE_WIDTH, LINES - 1, ASIDE_WIDTH + CAL_WIDTH);
     }
+    free(rmt_desc);
 }
