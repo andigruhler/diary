@@ -85,9 +85,6 @@ char* read_tokenfile() {
     char* tokenfile_path = expand_path(CONFIG.google_tokenfile);
     token_file = fopen(tokenfile_path, "r");
 
-    chmod(tokenfile_path, S_IRUSR|S_IWUSR);
-    perror("chmod");
-
     if (token_file == NULL) {
         perror("Failed to open tokenfile");
         return NULL;
@@ -146,6 +143,10 @@ void write_tokenfile() {
         fprintf(tokenfile, contents);
     }
     fclose(tokenfile);
+
+    chmod(tokenfile_path, S_IRUSR|S_IWUSR);
+    perror("chmod");
+
     char* token_json = read_tokenfile();
     fprintf(stderr, "New tokenfile contents: %s\n", token_json);
     fprintf(stderr, "New Access token: %s\n", access_token);
