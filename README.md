@@ -1,6 +1,6 @@
-# CLI Diary
+# Diary
 
-This is a text based diary, inspired by [khal](https://github.com/pimutils/khal). Diary entries are stored in raw text. You may say C & ncurses are old, I say paper is older..
+This is a text-based diary, inspired by [khal](https://github.com/pimutils/khal). Journal entries are stored in text files.
 
 ![Diary Demo](https://raw.githubusercontent.com/in0rdr/diary/master/demo.gif)
 
@@ -24,26 +24,24 @@ This is a text based diary, inspired by [khal](https://github.com/pimutils/khal)
 3. Use the keypad or VIM-like shortcuts to move between dates:
 
     ```
-    e, Enter  Edit the current entry
-    d, x      Delete/remove current entry
-    t         Jump to today
-    f         Find specific date
+    e, Enter  edit   current entry
+    d, x      delete current entry
+    s         sync   current entry with CalDAV server
 
     j, down   go forward by 1 week
     k, up     go backward by 1 week
     h, left   go left by 1 day
     l, right  go right by 1 day
+    J         go forward by 1 month
+    K         go backward by 1 month
 
-    N         go to the previous diary entry
-    n         go to the next diary entry
+    t         jump to today
+    f         jump to or find specific day
 
+    N         go to the previous journal entry
+    n         go to the next journal entry
     g         go to start of journal
     G         go to end of journal
-
-    J         Go forward by 1 month
-    K         Go backward by 1 month
-
-    s         Sync changes with CalDAV server
 
     q         quit the program
     ```
@@ -182,3 +180,8 @@ The token used to authenticate with the Google API is stored in the file specifi
 # Google OAuth2 tokenfile
 google_tokenfile = ~/.diary-token
 ```
+
+The application requires two [OAuth2 scopes](https://developers.google.com/calendar/auth) for CalDAV requests:
+
+1. `https://www.googleapis.com/auth/calendar`: read/write access to Calendars - required to discover the unique hyperlink/URI for the calendar specified by the [configuration key](#Configuration-File) `google_calendar`
+2. `https://www.googleapis.com/auth/calendar.events.owned`: read/write access to Events owned by the user - allows diary to create/read/update/delete events in `google_calendar`
