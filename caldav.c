@@ -324,7 +324,9 @@ char* get_oauth_code(const char* verifier, WINDOW* header) {
 
         // Cancel through stdin
         if (pfds[0].revents & POLLIN) {
-            int ch = getchar();
+            noecho();
+            int ch = wgetch(header);
+            echo();
             // sudo showkey -a 
             // Ctrl+c: ^C 0x03
             // q     :  q 0x71
@@ -543,9 +545,23 @@ void caldav_sync(struct tm* date, WINDOW* header, WINDOW* cal, int pad_pos) {
         user_principal = caldav_req(date, GOOGLE_CALDAV_URI, "PROPFIND", principal_postfields, 0);
     }
 
+    char* tokenfile_path = expand_path(CONFIG.google_tokenfile);
     if (user_principal == NULL) {
-        // todo: automatically remove tokenfile and retry until success?
-        fprintf(stderr, "Unable to fetch principal, invalid tokenfile. Please delete '%s' and retry.\n", CONFIG.google_tokenfile);
+        fprintf(stderr, "Unable to fetch principal due to invalid tokenfile. Removing tokenfile '%s'.\n", CONFIG.google_tokenfile);
+
+        wclear(header);
+        mvwprintw(header, 0, 0, "Invalid Google OAuth2 credentials, removing tokenfile at '%s'. Please retry.", CONFIG.google_tokenfile);
+        wrefresh(header);
+
+        // accept any input to proceed
+        noecho();
+        wgetch(header);
+        echo();
+
+        if (unlink(tokenfile_path) == -1) {
+            perror("unlink tokenfile");
+        }
+
         free(access_token);
         access_token = NULL;
         free(refresh_token);
@@ -647,12 +663,6 @@ void caldav_sync(struct tm* date, WINDOW* header, WINDOW* cal, int pad_pos) {
     double timediff = difftime(attr.st_mtime, remote_date);
     fprintf(stderr, "Time diff between local and remote mod time:%e\n", timediff);
 
-
-    // todo: find out if no remote file exists
-    //       find out when no local file exists, 1970
-    // File last modified time: Thu Jan  1 01:00:00 1970
-    // Remote last modified: Mon Feb 13 06:31:36 89854
-
     if ((timediff > 0 && local_file_exists) || (local_file_exists && !remote_file_exists)) {
         // local time > remote time
         // if local file mod time more recent than LAST-MODIFIED
@@ -661,45 +671,65 @@ void caldav_sync(struct tm* date, WINDOW* header, WINDOW* cal, int pad_pos) {
     }
 
     char* rmt_desc;
+    char dstr[16];
+    int conf_ch;
     if ((timediff < 0 && remote_file_exists) || (!local_file_exists && remote_file_exists)) {
-        //todo: Warn - really sync? remote is more recent and will overwrite
-        fprintf(stderr, "Remote file is newer, extracting description from remote...\n");
-
         rmt_desc = extract_ical_field(event, "DESCRIPTION", true);
         fprintf(stderr, "Remote event description:%s\n", rmt_desc);
+
         if (rmt_desc == NULL) {
             fprintf(stderr, "Failed to fetch description of remote event.\n");
             return;
         }
 
-        // persist downloaded buffer to local file
-        FILE* cursordate_file = fopen(path, "wb");
-        if (cursordate_file == NULL) {
-            perror("Failed to open cursor date file");
-        } else {
-            for (char* i = rmt_desc; *i != '\0'; i++) {
-                if (rmt_desc[i-rmt_desc] == 0x5C) { // backslash
-                    switch (*(i+1)) {
-                        case 'n':
-                            fputc('\n', cursordate_file);
-                            i++;
-                            break;
-                        case 0x5c: // preserve real backslash
-                            fputc(0x5c, cursordate_file);
-                            i++;
-                            break;
-                    }
-                } else {
-                    fputc(*i, cursordate_file);
-                }
-            }
-        }
-        fclose(cursordate_file);
+        // prepare header for confirmation dialogue
+        wclear(header);
+        curs_set(2);
+        noecho();
 
-        // add new entry highlight
-        chtype atrs = winch(cal) & A_ATTRIBUTES;
-        wchgat(cal, 2, atrs | A_BOLD, 0, NULL);
-        prefresh(cal, pad_pos, 0, 1, ASIDE_WIDTH, LINES - 1, ASIDE_WIDTH + CAL_WIDTH);
+        // ask for confirmation
+        strftime(dstr, sizeof dstr, CONFIG.fmt, date);
+        mvwprintw(header, 0, 0, "Remote event is more recent. Sync entry '%s' and overwrite local file? [Y/n] ", dstr);
+        bool conf = false;
+        while (!conf) {
+            conf_ch = wgetch(header);
+            if (conf_ch == 'y' || conf_ch == 'Y' || conf_ch == '\n') {
+                fprintf(stderr, "Remote file is newer, extracting description from remote...\n");
+
+                // persist downloaded buffer to local file
+                FILE* cursordate_file = fopen(path, "wb");
+                if (cursordate_file == NULL) {
+                    perror("Failed to open cursor date file");
+                } else {
+                    for (char* i = rmt_desc; *i != '\0'; i++) {
+                        if (rmt_desc[i-rmt_desc] == 0x5C) { // backslash
+                            switch (*(i+1)) {
+                                case 'n':
+                                    fputc('\n', cursordate_file);
+                                    i++;
+                                    break;
+                                case 0x5c: // preserve real backslash
+                                    fputc(0x5c, cursordate_file);
+                                    i++;
+                                    break;
+                            }
+                        } else {
+                            fputc(*i, cursordate_file);
+                        }
+                    }
+                }
+                fclose(cursordate_file);
+
+                // add new entry highlight
+                chtype atrs = winch(cal) & A_ATTRIBUTES;
+                wchgat(cal, 2, atrs | A_BOLD, 0, NULL);
+                prefresh(cal, pad_pos, 0, 1, ASIDE_WIDTH, LINES - 1, ASIDE_WIDTH + CAL_WIDTH);
+            }
+            break;
+        }
+
+        echo();
+        curs_set(0);
+        free(rmt_desc);
     }
-    free(rmt_desc);
 }
