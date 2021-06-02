@@ -77,17 +77,6 @@ void draw_calendar(WINDOW* number_pad, WINDOW* month_pad, const char* diary_dir,
     }
 }
 
-/* Update the header with the cursor date */
-void update_date(WINDOW* header) {
-    char dstr[16];
-    mktime(&curs_date);
-    strftime(dstr, sizeof dstr, CONFIG.fmt, &curs_date);
-
-    wclear(header);
-    mvwaddstr(header, 0, 0, dstr);
-    wrefresh(header);
-}
-
 bool go_to(WINDOW* calendar, WINDOW* aside, time_t date, int* cur_pad_pos) {
     if (date < mktime(&cal_start) || date > mktime(&cal_end))
         return false;
@@ -474,7 +463,7 @@ int main(int argc, char** argv) {
 
     WINDOW* header = newwin(1, COLS - CAL_WIDTH - ASIDE_WIDTH, 0, ASIDE_WIDTH + CAL_WIDTH);
     wattron(header, A_BOLD);
-    update_date(header);
+    update_date(header, &curs_date);
     WINDOW* wdays = newwin(1, 3 * 7, 0, ASIDE_WIDTH);
     draw_wdays(wdays);
 
@@ -573,7 +562,6 @@ int main(int argc, char** argv) {
                     mv_valid = go_to(cal, aside, mktime(&new_date), &pad_pos);
                 }
                 curs_set(0);
-                //update_date(header);
                 break;
             // today shortcut
             case 't':
@@ -611,7 +599,7 @@ int main(int argc, char** argv) {
                                          LINES - 1, ASIDE_WIDTH + CAL_WIDTH);
                             }
                         } else if (conf_ch == 27 || conf_ch == 'n') {
-                            update_date(header);
+                            update_date(header, &curs_date);
                         }
                         break;
                     }
@@ -652,16 +640,27 @@ int main(int argc, char** argv) {
                 new_date = find_closest_entry(new_date, false, CONFIG.dir, diary_dir_size);
                 mv_valid = go_to(cal, aside, mktime(&new_date), &pad_pos);
                 break;
-            // Sync with CalDAV server
+            // Sync entry with CalDAV server
             case 's':
-                //strftime(dstr, sizeof dstr, CONFIG.fmt, &curs_date);
-                mktime(&curs_date);
                 caldav_sync(&curs_date, header, cal, pad_pos);
                 break;
+            // Sync all with CalDAV server
+//            case 'S':
+//                time_t end_time = mktime(&cal_end);
+//                time_t start_time = mktime(&cal_start);
+//                struct tm it = curs_date;
+//                time_t it_time = mktime(&it);
+//                for( ; it_time >= start_time && it_time <= end_time; it_time = mktime(&it)) {
+//                    it.tm_mday++;
+//                    if (date_has_entry(diary_dir, diary_dir_size, &it)) {
+//                        caldav_sync(&it, header, cal, pad_pos);
+//                    }
+//                }
+//                break;
         }
 
         if (mv_valid) {
-            update_date(header);
+            update_date(header, &curs_date);
 
             // adjust prev and header width (if terminal was resized in the mean time)
             prev_width = COLS - ASIDE_WIDTH - CAL_WIDTH;

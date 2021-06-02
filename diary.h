@@ -29,7 +29,6 @@ static const char* WEEKDAYS[] = {"Su","Mo","Tu","We","Th","Fr","Sa"};
 void setup_cal_timeframe();
 void draw_wdays(WINDOW* head);
 void draw_calendar(WINDOW* number_pad, WINDOW* month_pad, const char* diary_dir, size_t diary_dir_size);
-void update_date(WINDOW* header);
 
 bool go_to(WINDOW* calendar, WINDOW* aside, time_t date, int* cur_pad_pos);
 void display_entry(const char* dir, size_t dir_size, const struct tm* date, WINDOW* win, int width);
