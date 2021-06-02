@@ -548,10 +548,14 @@ void put_event(struct tm* date, const char* dir, size_t dir_size, char* calendar
 
     fprintf(stderr, "PUT event postfields:\n%s\n", postfields);
 
-    char* reponse = caldav_req(date, calendar_uri, "PUT", ics, 0);
-    fprintf(stderr, "PUT event response:\n%s\n", reponse);
+    char* response = caldav_req(date, calendar_uri, "PUT", postfields, 0);
+    fprintf(stderr, "PUT event response:\n%s\n", response);
     fclose(fp);
     free(file_buf);
+
+    if (response == NULL) {
+        fprintf(stderr, "PUT event failed.\n");
+    }
 }
 
 void caldav_sync(struct tm* date, WINDOW* header, WINDOW* cal, int pad_pos, const char* dir, size_t dir_size) {
