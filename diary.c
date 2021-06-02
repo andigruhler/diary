@@ -642,7 +642,7 @@ int main(int argc, char** argv) {
                 break;
             // Sync entry with CalDAV server
             case 's':
-                caldav_sync(&curs_date, header, cal, pad_pos);
+                caldav_sync(&curs_date, header, cal, pad_pos, CONFIG.dir, diary_dir_size);
                 break;
             // Sync all with CalDAV server
 //            case 'S':

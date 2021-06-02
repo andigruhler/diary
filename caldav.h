@@ -37,7 +37,7 @@
 #define GOOGLE_API_URI "https://apidata.googleusercontent.com"
 #define GOOGLE_CALDAV_URI GOOGLE_API_URI "/caldav/v2"
 
-void caldav_sync(struct tm* date, WINDOW* header, WINDOW* cal, int pad_pos);
+void caldav_sync(struct tm* date, WINDOW* header, WINDOW* cal, int pad_pos, const char* dir, size_t dir_size);
 
 struct curl_mem_chunk {
     char* memory;

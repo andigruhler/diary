@@ -79,7 +79,7 @@ char* extract_oauth_code(char* http_header) {
 
 char* read_tokenfile() {
     FILE* token_file;
-    char* token_buff;
+    char* token_buf;
     long token_bytes;
 
     char* tokenfile_path = expand_path(CONFIG.google_tokenfile);
@@ -95,14 +95,14 @@ char* read_tokenfile() {
     token_bytes = ftell(token_file);
     rewind(token_file);
 
-    token_buff = malloc(token_bytes);
-    if (token_buff != NULL) {
-        fread(token_buff, sizeof(char), token_bytes, token_file);
+    token_buf = malloc(token_bytes);
+    if (token_buf != NULL) {
+        fread(token_buf, sizeof(char), token_bytes, token_file);
 
-        access_token = extract_json_value(token_buff, "access_token", true);
+        access_token = extract_json_value(token_buf, "access_token", true);
 
         // program segfaults if NULL value is provided to atoi
-        char* token_ttl_str = extract_json_value(token_buff, "expires_in", false);
+        char* token_ttl_str = extract_json_value(token_buf, "expires_in", false);
         if (token_ttl_str == NULL) {
             token_ttl = 0;
         } else {
@@ -112,7 +112,7 @@ char* read_tokenfile() {
         // only update the existing refresh token if the request actually
         // contained a valid refresh_token, i.e, if it was the initial
         // interactive authZ request from token code confirmed by the user
-        char* new_refresh_token = extract_json_value(token_buff, "refresh_token", true);
+        char* new_refresh_token = extract_json_value(token_buf, "refresh_token", true);
         if (new_refresh_token != NULL) {
             refresh_token = new_refresh_token;
         }
@@ -122,7 +122,7 @@ char* read_tokenfile() {
         fprintf(stderr, "Refresh token: %s\n", refresh_token);
     }
     fclose(token_file);
-    return token_buff;
+    return token_buf;
 }
 
 void write_tokenfile() {
@@ -376,7 +376,6 @@ char* get_oauth_code(const char* verifier, WINDOW* header) {
 }
 
 char* caldav_req(struct tm* date, char* url, char* http_method, char* postfields, int depth) {
-
     // only support depths 0 or 1
     if (depth < 0 || depth > 1) {
         return NULL;
@@ -501,11 +500,61 @@ char* parse_caldav_calendar(char* xml, char* calendar) {
     return NULL;
 }
 
-void put_event(struct tm* date) {
+void put_event(struct tm* date, const char* dir, size_t dir_size, char* calendar_uri) {
+    // get entry path
+    char path[100];
+    char* ppath = path;
+    char* file_buf;
+    long file_bytes;
 
+    fpath(dir, dir_size, date, &ppath, sizeof path);
+    if (ppath == NULL) {
+        fprintf(stderr, "Error while retrieving file path for diary reading");
+        return;
+    }
+
+    FILE* fp = fopen(path, "r");
+    if (fp == NULL) perror("Error opening file");
+
+    fseek(fp, 0, SEEK_END);
+    file_bytes = ftell(fp);
+    rewind(fp);
+
+    file_buf = malloc(file_bytes);
+
+    if (file_buf != NULL) {
+        fread(file_buf, sizeof(char), file_bytes, fp);
+
+        fprintf(stderr, "File buffer that will be uploaded to the remote CalDAV server:\n%s\n", file_buf);
+    }
+
+    char uid[9];
+    strftime(uid, sizeof uid, "%Y%m%d", date);
+
+    char* ics = "BEGIN:VCALENDAR\n"
+                "BEGIN:VEVENT\n"
+                "UID:%s\n"
+                "DTSTART;VALUE=DATE:%s\n"
+                "SUMMARY:%s\n"
+                "DESCRIPTION:%s\n"
+                "END:VEVENT\n"
+                "END:VCALENDAR";
+    char postfields[strlen(ics) + strlen(file_buf) + 100];
+    sprintf(postfields, ics,
+            uid,
+            uid,
+            uid, // todo: display first few chars of DESCRIPTION as SUMMARY
+            file_buf); //todo: fold multiline descriptions
+
+    fprintf(stderr, "PUT event postfields:\n%s\n", postfields);
+
+    char* reponse = caldav_req(date, calendar_uri, "PUT", ics, 0);
+    fprintf(stderr, "PUT event response:\n%s\n", reponse);
+    fclose(fp);
+    free(file_buf);
 }
 
-void caldav_sync(struct tm* date, WINDOW* header, WINDOW* cal, int pad_pos) {
+void caldav_sync(struct tm* date, WINDOW* header, WINDOW* cal, int pad_pos, const char* dir, size_t dir_size) {
     // fetch existing API tokens
     char* tokfile = read_tokenfile();
     free(tokfile);
@@ -583,12 +632,6 @@ void caldav_sync(struct tm* date, WINDOW* header, WINDOW* cal, int pad_pos) {
     char* calendar_href = parse_caldav_calendar(home_set, CONFIG.google_calendar);
     fprintf(stderr, "\nCalendar href: %s\n", calendar_href);
 
-    // get cursor date
-    //char dstr[16];
-    //mktime(date);
-    //strftime(date, dstr, sizeof dstr, CONFIG.fmt);
-    //fprintf(stderr, "\nCursor date: %s\n\n", dstr);
-
     char* xml_filter = "<c:calendar-query xmlns:d='DAV:' xmlns:c='urn:ietf:params:xml:ns:caldav'>"
                        "<d:prop><c:calendar-data/></d:prop>"
                        "<c:filter><c:comp-filter name='VCALENDAR'>"
@@ -646,7 +689,9 @@ void caldav_sync(struct tm* date, WINDOW* header, WINDOW* cal, int pad_pos) {
 
     // check remote LAST-MODIFIED:20210521T212441Z of remote event
     char* remote_last_mod = extract_ical_field(event, "LAST-MODIFIED", false);
+    char* remote_uid = extract_ical_field(event, "UID", false);
     fprintf(stderr, "Remote last modified: %s\n", remote_last_mod);
+    fprintf(stderr, "Remote UID: %s\n", remote_uid);
     if (remote_last_mod == NULL) {
         remote_file_exists = false;
     } else {
@@ -666,8 +711,14 @@ void caldav_sync(struct tm* date, WINDOW* header, WINDOW* cal, int pad_pos) {
     if ((timediff > 0 && local_file_exists) || (local_file_exists && !remote_file_exists)) {
         // local time > remote time
         // if local file mod time more recent than LAST-MODIFIED
+
+        if (remote_file_exists) {
+            // purge any existing daily calendar entries on the remote side
+            sprintf(uri, "%s%s%s.ics", GOOGLE_API_URI, calendar_href, remote_uid);
+            caldav_req(date, uri, "DELETE", "", 0);
+        }
         fprintf(stderr, "Local file is newer, uploading to remote...\n");
-        //put_event(date);
+        put_event(date, dir, dir_size, uri);
     }
 
     char* rmt_desc;
@@ -675,6 +726,9 @@ void caldav_sync(struct tm* date, WINDOW* header, WINDOW* cal, int pad_pos) {
     int conf_ch;
     if ((timediff < 0 && remote_file_exists) || (!local_file_exists && remote_file_exists)) {
         rmt_desc = extract_ical_field(event, "DESCRIPTION", true);
+        // todo: fix bug, DESCRIPTION is literally "LAST-MODIFIED:20210602T210152Z"
+        // (next line) whenever DESCRIPTION is empty
+
         fprintf(stderr, "Remote event description:%s\n", rmt_desc);
 
         if (rmt_desc == NULL) {
