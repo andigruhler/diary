@@ -1,5 +1,18 @@
 #include "utils.h"
 
+/* Update the header with the cursor date */
+void update_date(WINDOW* header, struct tm* curs_date) {
+    // TODO: dstr for strlen(CONFIG.format) > 16 ?
+    char dstr[16];
+    mktime(curs_date);
+    strftime(dstr, sizeof dstr, CONFIG.fmt, curs_date);
+
+    wclear(header);
+    mvwaddstr(header, 0, 0, dstr);
+    wrefresh(header);
+}
+
+
 char* extract_json_value(const char* json, char* key, bool quoted) {
     // work on a copy of the json
     char* jsoncp = (char*) malloc(strlen(json) * sizeof(char));

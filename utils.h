@@ -8,6 +8,7 @@
 #include <string.h>
 #include <wordexp.h>
 #include <stdbool.h>
+#include <ncurses.h>
 
 #define GOOGLE_OAUTH_TOKEN_FILE "~/.diary-token"
 #ifndef GOOGLE_OAUTH_CLIENT_ID
@@ -21,6 +22,7 @@
 #define ASIDE_WIDTH 4
 #define MAX_MONTH_HEIGHT 6
 
+void update_date(WINDOW* header, struct tm* curs_date);
 char* extract_json_value(const char* json, char* key, bool quoted);
 char* extract_ical_field(const char* ical, char* key, bool multline);
 char* expand_path(const char* str);
