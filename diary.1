@@ -114,9 +114,9 @@ Create default config location:
 
 Install an example config file with defaults:
 
-.nf
-    tee ${XDG_CONFIG_HOME:-~/.config}/diary/diary.cfg <<EOF
 .in 0
+.nf
+tee ${XDG_CONFIG_HOME:-~/.config}/diary/diary.cfg <<EOF
 # Path that holds the journal text files
 #dir = ~/diary
 # Number of years to show before/after todays date
