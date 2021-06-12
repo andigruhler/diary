@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8"/>
+  <style>
+    table.head, table.foot { width: 100%; }
+    td.head-rtitle, td.foot-os { text-align: right; }
+    td.head-vol { text-align: center; }
+    div.Pp { margin: 1ex 0ex; }
+    div.Nd, div.Bf, div.Op { display: inline; }
+    span.Pa, span.Ad { font-style: italic; }
+    span.Ms { font-weight: bold; }
+    dl.Bl-diag > dt { font-weight: bold; }
+    code.Nm, code.Fl, code.Cm, code.Ic, code.In, code.Fd, code.Fn,
+    code.Cd { font-weight: bold; font-family: inherit; }
+  </style>
+  <title>DIARY(1)</title>
+</head>
+<body>
+<table class="head">
+  <tr>
+    <td class="head-ltitle">DIARY(1)</td>
+    <td class="head-vol">General Commands Manual</td>
+    <td class="head-rtitle">DIARY(1)</td>
+  </tr>
+</table>
+<div class="manual-text">
+<h1 class="Sh" title="Sh" id="NAME"><a class="permalink" href="#NAME">NAME</a></h1>
+diary - Text-based journaling program
+<div class="Pp"></div>
+<h1 class="Sh" title="Sh" id="SYNOPSIS"><a class="permalink" href="#SYNOPSIS">SYNOPSIS</a></h1>
+<b>diary</b> [ <i>OPTION</i>]... [<i>DIRECTORY</i>]...
+<div>&#x00A0;</div>
+<div class="Pp"></div>
+<h1 class="Sh" title="Sh" id="DESCRIPTION"><a class="permalink" href="#DESCRIPTION">DESCRIPTION</a></h1>
+<b>diary</b> is a text-based program for managing journal entries.
+<div class="Pp"></div>
+<h1 class="Sh" title="Sh" id="OPTIONS"><a class="permalink" href="#OPTIONS">OPTIONS</a></h1>
+<dl class="Bl-tag">
+  <dt><b>-v</b>, <b>--version</b></dt>
+  <dd>Print diary version</dd>
+</dl>
+<dl class="Bl-tag">
+  <dt><b>-h</b>, <b>--help</b></dt>
+  <dd>Show diary help text</dd>
+</dl>
+<dl class="Bl-tag">
+  <dt><b>-d</b>, <b>--dir</b>=<i>DIARY_DIR</i></dt>
+  <dd>Diary storage directory DIARY_DIR</dd>
+</dl>
+<dl class="Bl-tag">
+  <dt><b>-e</b>, <b>--editor</b>=<i>EDITOR</i></dt>
+  <dd>EDITOR is the text editor used for opening the journal files.</dd>
+</dl>
+<dl class="Bl-tag">
+  <dt><b>-f</b>, <b>--fmt</b>=<i>FMT</i></dt>
+  <dd>FMT is a custom date and file format. Change with care, because the diary
+      reads and writes to files with file name FMT. The new FMT is only applied
+      to newly saved entries. Existing entries with the old FMT are not
+      automatically migrated to the new FMT and do not show up with a new FMT
+      specifier. Consequently, a change in FMT shows an empty diary at first.
+      Rename all files in the DIARY_DIR to migrate to a new FMT.</dd>
+</dl>
+<dl class="Bl-tag">
+  <dt><b>-r</b>, <b>--range</b>=<i>RANGE</i></dt>
+  <dd>RANGE is the number of years to show before/after todays date. Defaults to
+      1 year.</dd>
+</dl>
+<dl class="Bl-tag">
+  <dt><b>-f</b>, <b>--weekday</b>=<i>DAY</i></dt>
+  <dd>First day of the week. DAY is an integer in range (0..6), interpreted as 0
+      or 7 = Sun, 1 = Mon, ..., 6 = Sat. If glibc is installed, the first day of
+      the week is derived from the current locale setting ('$LANG', see man
+      locale). Without glibc, the first weekday defaults to 1 (Monday), unless
+      specified otherwise with this option.
+    <div class="Pp"></div>
+  </dd>
+</dl>
+<h1 class="Sh" title="Sh" id="NAVIGATION"><a class="permalink" href="#NAVIGATION">NAVIGATION</a></h1>
+Navigation is done using the following vim-inspired keyboard shortcuts:
+<div class="Pp"></div>
+<table class="tbl">
+  <tr>
+    <td>Key(s) </td>
+    <td> Action</td>
+  </tr>
+  <tr>
+    <td>====== </td>
+    <td> ======</td>
+  </tr>
+  <tr>
+    <td>e, Enter </td>
+    <td> edit current entry</td>
+  </tr>
+  <tr>
+    <td>d, x </td>
+    <td> delete current entry</td>
+  </tr>
+  <tr>
+    <td>s </td>
+    <td> sync current entry with CalDAV server</td>
+  </tr>
+  <tr>
+    <td></td>
+    <td></td>
+  </tr>
+  <tr>
+    <td>t </td>
+    <td> jump to today</td>
+  </tr>
+  <tr>
+    <td>f </td>
+    <td> jump to or find specific day</td>
+  </tr>
+  <tr>
+    <td></td>
+    <td></td>
+  </tr>
+  <tr>
+    <td>j, down </td>
+    <td> go forward by 1 week</td>
+  </tr>
+  <tr>
+    <td>k, up </td>
+    <td> go backward by 1 week</td>
+  </tr>
+  <tr>
+    <td>h, left </td>
+    <td> go left by 1 day</td>
+  </tr>
+  <tr>
+    <td>l, right </td>
+    <td> go right by 1 day</td>
+  </tr>
+  <tr>
+    <td>J </td>
+    <td> go forward by 1 month</td>
+  </tr>
+  <tr>
+    <td>K </td>
+    <td> go backward by 1 month</td>
+  </tr>
+  <tr>
+    <td></td>
+    <td></td>
+  </tr>
+  <tr>
+    <td>N </td>
+    <td> go to the previous journal entry</td>
+  </tr>
+  <tr>
+    <td>n </td>
+    <td> go to the next journal entry</td>
+  </tr>
+  <tr>
+    <td>g </td>
+    <td> go to the first journal entry</td>
+  </tr>
+  <tr>
+    <td>G </td>
+    <td> go to the last journal entry</td>
+  </tr>
+  <tr>
+    <td></td>
+    <td></td>
+  </tr>
+  <tr>
+    <td>q </td>
+    <td> quit the program</td>
+  </tr>
+</table>
+<div class="Pp"></div>
+<h1 class="Sh" title="Sh" id="ENVIRONMENT"><a class="permalink" href="#ENVIRONMENT">ENVIRONMENT</a></h1>
+<dl class="Bl-tag">
+  <dt>DIARY_DIR</dt>
+  <dd>If this variable is set to a directory that can be opened, <b>diary</b>
+      will use it to store diary files. Diary files are simple text files named
+      after their date, formatted according to FMT (see '-f'/'--fmt' options and
+      (see man strftime). All other files different from FMT are ignored.
+    <div class="Pp"></div>
+  </dd>
+</dl>
+<dl class="Bl-tag">
+  <dt>EDITOR</dt>
+  <dd>The program used to edit journal entries.
+    <div class="Pp"></div>
+  </dd>
+</dl>
+<dl class="Bl-tag">
+  <dt>LANG</dt>
+  <dd>The default locale used to display the first day of the week.
+    <div class="Pp"></div>
+  </dd>
+</dl>
+<h1 class="Sh" title="Sh" id="ARGUMENTS"><a class="permalink" href="#ARGUMENTS">ARGUMENTS</a></h1>
+If the argument <i>DIRECTORY</i> is given, diary files are read from and stored
+  to that directory, ignoring the DIARY_DIR environment variable, any
+  '-d'/'--dir' options or the 'dir' value set in the config file.
+<div class="Pp"></div>
+<h1 class="Sh" title="Sh" id="FILES"><a class="permalink" href="#FILES">FILES</a></h1>
+<dl class="Bl-tag">
+  <dt><i>${PREFIX:-/usr/local/bin}/diary</i></dt>
+  <dd>The diary binary</dd>
+</dl>
+<dl class="Bl-tag">
+  <dt><i>${XDG_CONFIG_HOME:-~/.config}/diary/diary.cfg</i></dt>
+  <dd>An optional diary configuration file
+    <div class="Pp"></div>
+  </dd>
+</dl>
+<h1 class="Sh" title="Sh" id="CONFIGURATION_FILE"><a class="permalink" href="#CONFIGURATION_FILE">CONFIGURATION
+  FILE</a></h1>
+The diary.cfg configuration file can optionally be used to persist diary
+  configuration. Use the '#' or ';' characters to comment lines.
+<div class="Pp"></div>
+Create default config location:
+<div class="Pp"></div>
+<pre>
+    mkdir -p ${XDG_CONFIG_HOME:-~/.config}/diary
+</pre>
+<div class="Pp"></div>
+Install an example config file with defaults:
+<div class="Pp"></div>
+<br/>
+<pre>
+tee ${XDG_CONFIG_HOME:-~/.config}/diary/diary.cfg &lt;&lt;EOF
+# Path that holds the journal text files
+#dir = ~/diary
+# Number of years to show before/after todays date
+range = 1
+# 0 = Sunday, 1 = Monday, ..., 6 = Saturday
+weekday = 1
+# Date and file format, change with care
+fmt = %Y-%m-%d
+# Editor to open journal files with
+editor =
+# Google calendar name for CalDAV sync
+#google_calendar =
+# Google OAuth2 clientid and secretid
+#google_clientid =
+#google_secretid =
+# Google OAuth2 tokenfile
+#google_tokenfile = ~/.diary-token
+EOF
+</pre>
+<div class="Pp"></div>
+<h1 class="Sh" title="Sh" id="PRECEDENCE_RULES"><a class="permalink" href="#PRECEDENCE_RULES">PRECEDENCE
+  RULES</a></h1>
+The default variables, for instance, for the configuration variables 'editor',
+  'dir' and 'weekday', are populated with values in the following order:
+<div class="Pp"></div>
+<dl class="Bl-tag">
+  <dt>1.</dt>
+  <dd>No default for 'DIARY_DIR'. Defaults for 'range', 'weekday', 'fmt' and
+      'editor' are provided in 'diary.h'. If 'EDITOR' is unset and no editor is
+      provided in the config file or via the '-e' option, the <b>diary</b> works
+      read-only. Journal files cannot be opened. If 'DIARY_DIR' is not provided,
+      the <b>diary</b> won't open.</dd>
+</dl>
+<dl class="Bl-tag">
+  <dt>2.</dt>
+  <dd><b>Config file</b> (empty default for 'editor', no default for 'dir')</dd>
+</dl>
+<dl class="Bl-tag">
+  <dt>3.</dt>
+  <dd><b>Environment</b> variables '$DIARY_DIR', '$EDITOR' and '$LANG' for
+      locale ('weekday')</dd>
+</dl>
+<dl class="Bl-tag">
+  <dt>4.</dt>
+  <dd><b>Option</b> arguments, see section <b>OPTIONS</b></dd>
+</dl>
+<dl class="Bl-tag">
+  <dt>5.</dt>
+  <dd>First non-option argument <i>DIRECTORY</i> is interpreted as 'DIARY_DIR'
+    <div class="Pp"></div>
+  </dd>
+</dl>
+<h1 class="Sh" title="Sh" id="PRECEDENCE_EXAMPLE:_LOCALE_AND_FIRST_DAY_OF_WEEK"><a class="permalink" href="#PRECEDENCE_EXAMPLE:_LOCALE_AND_FIRST_DAY_OF_WEEK">PRECEDENCE
+  EXAMPLE: LOCALE AND FIRST DAY OF WEEK</a></h1>
+If glibc is installed, the first weekday defaults to the locale defined in the
+  current shell environment ($LANG, see man locale), unless specified otherwise
+  via the '--weekday'/'-w'.
+<div class="Pp"></div>
+<pre>
+# start with weekday=3(Wed), overrule any other configuration value
+diary -w3
+# start with glibc derived weekday=1, regardless of 'weekday' in config file
+LANG=de_CH diary
+# if glibc is installed, start with glibc derived base date (weekday=0)
+LANG= diary
+# disable environment variable, default to value from config file
+unset LANG
+# start with 'weekday' default from config file, if available
+diary
+# remove config file
+rm ${XDG_CONFIG_HOME:-~/.config}/diary/diary.cfg
+# start with 'weekday' default value from source code (1=Mon)
+diary
+</pre>
+<div class="Pp"></div>
+<h1 class="Sh" title="Sh" id="DEVELOPMENT"><a class="permalink" href="#DEVELOPMENT">DEVELOPMENT</a></h1>
+All source code is available in this github repository:
+  &lt;https://github.com/in0rdr/diary&gt;. Contributions are always
+  welcome!</div>
+<table class="foot">
+  <tr>
+    <td class="foot-date"></td>
+    <td class="foot-os"></td>
+  </tr>
+</table>
+</body>
+</html>
