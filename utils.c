@@ -45,6 +45,39 @@ char* extract_json_value(const char* json, char* key, bool quoted) {
     return res;
 }
 
+char* fold(const char* str) {
+    // work on a copy of the str
+    int strl = strlen(str);
+    char* strcp = (char *) malloc(strl * sizeof(char));
+    strcpy(strcp, str);
+
+    if (strlen(strcp) <= 75) return strcp;
+
+    char* buf = malloc(1);
+    buf = '\0';
+    size_t bufl = 0;
+
+    // break lines after 75 chars
+    for (char* i = strcp; i-strcp < strl; i += 75) {
+        // split between any two characters by inserting a CRLF
+        // immediately followed by a white space character
+        fprintf(stderr, "next size: %li\n", bufl + 77);
+        fprintf(stderr, "buf: %s\n", buf);
+        buf = realloc(buf, bufl + 77);
+        if (buf == NULL) {
+            perror("realloc failed");
+            return buf;
+        }
+        strncat(buf, i, 75);
+        buf[i - strcp] = '\n';
+        buf[i - strcp + 1] = ' ';
+        bufl = strlen(buf);
+    }
+
+    free(strcp);
+    return buf;
+}
+
 char* unfold(const char* str) {
     // work on a copy of the str
     char* strcp = (char *) malloc(strlen(str) * sizeof(char));
@@ -78,7 +111,7 @@ char* unfold(const char* str) {
         } else {
             perror("realloc failed");
             return NULL;
-	    }
+        }
     }
 
     regfree(&re);
@@ -87,6 +120,17 @@ char* unfold(const char* str) {
 }
 
 char* extract_ical_field(const char* ics, char* key, bool multiline) {
+    regex_t re;
+    regmatch_t pm[1];
+    char key_regex[strlen(key) + 1];
+    sprintf(key_regex, "^%s", key);
+    fprintf(stderr, "Key regex: %s\n", key_regex);
+
+    if (regcomp(&re, key_regex, 0) != 0) {
+        perror("Failed to compile regex");
+        return NULL;
+    }
+
     // work on a copy of the ical xml response
     char* field = (char *) malloc(strlen(ics) * sizeof(char));
     strcpy(field, ics);
@@ -94,7 +138,7 @@ char* extract_ical_field(const char* ics, char* key, bool multiline) {
     char* res = strtok(field, "\n");
 
     while (res != NULL) {
-        if (strstr(res, key) != NULL) {
+        if (regexec(&re, res, 1, pm, 0) == 0) {
             res = strstr(res, ":"); // value
             res++; // strip the ":"
             break;
@@ -170,6 +214,11 @@ void fpath(const char* dir, size_t dir_size, const struct tm* date, char** rpath
     }
     strcat(*rpath, dstr);
 }
+
+// TODO: write functions for (un)escaped TEXT
+// https://datatracker.ietf.org/doc/html/rfc5545#section-3.3.11
+char* unescape_ical_description(const char* description);
+char* escape_ical_description(const char* description);
 
 config CONFIG = {
     .range = 1,

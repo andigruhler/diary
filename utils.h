@@ -24,6 +24,8 @@
 
 void update_date(WINDOW* header, struct tm* curs_date);
 char* extract_json_value(const char* json, char* key, bool quoted);
+char* fold(const char* str);
+char* unfold(const char* str);
 char* extract_ical_field(const char* ical, char* key, bool multline);
 char* expand_path(const char* str);
 char* strrstr(char *haystack, char *needle);
