@@ -98,6 +98,7 @@ char* read_tokenfile() {
     token_buf = malloc(token_bytes);
     if (token_buf != NULL) {
         fread(token_buf, sizeof(char), token_bytes, token_file);
+        token_buf[token_bytes] = '\0';
 
         access_token = extract_json_value(token_buf, "access_token", true);
 
@@ -143,7 +144,7 @@ void write_tokenfile() {
                 access_token,
                 token_ttl,
                 refresh_token);
-        fprintf(tokenfile, contents);
+        fputs(contents, tokenfile);
     }
     fclose(tokenfile);
 
@@ -504,8 +505,8 @@ void put_event(struct tm* date, const char* dir, size_t dir_size, char* calendar
     // get entry path
     char path[100];
     char* ppath = path;
-    char* file_buf;
-    long file_bytes;
+    char* descr;
+    long descr_bytes;
 
     fpath(dir, dir_size, date, &ppath, sizeof path);
     if (ppath == NULL) {
@@ -517,16 +518,18 @@ void put_event(struct tm* date, const char* dir, size_t dir_size, char* calendar
     if (fp == NULL) perror("Error opening file");
 
     fseek(fp, 0, SEEK_END);
-    file_bytes = ftell(fp);
+    descr_bytes = ftell(fp);
     rewind(fp);
 
-    file_buf = malloc(file_bytes);
+    descr = malloc(descr_bytes);
+    if (descr == NULL) perror("Error allocating space for description");
 
-    if (file_buf != NULL) {
-        fread(file_buf, sizeof(char), file_bytes, fp);
+    fread(descr, sizeof(char), descr_bytes, fp);
+    descr[descr_bytes] = '\0';
+    fprintf(stderr, "File buffer that will be uploaded to the remote CalDAV server:\n%s\n", descr);
 
-        fprintf(stderr, "File buffer that will be uploaded to the remote CalDAV server:\n%s\n", file_buf);
-    }
+    char* folded_descr = fold(descr);
+    fprintf(stderr, "Folded descr:\n%s\n", folded_descr);
 
     char uid[9];
     strftime(uid, sizeof uid, "%Y%m%d", date);
@@ -539,26 +542,52 @@ void put_event(struct tm* date, const char* dir, size_t dir_size, char* calendar
                 "DESCRIPTION:%s\n"
                 "END:VEVENT\n"
                 "END:VCALENDAR";
-    char postfields[strlen(ics) + strlen(file_buf) + 100];
+    char postfields[strlen(ics) + strlen(folded_descr) + 100];
     sprintf(postfields, ics,
             uid,
             uid,
             uid, // todo: display first few chars of DESCRIPTION as SUMMARY
-            file_buf); //todo: fold multiline descriptions
+            folded_descr); //todo: fold multiline descriptions
 
     fprintf(stderr, "PUT event postfields:\n%s\n", postfields);
 
+    strcat(calendar_uri, uid);
+    strcat(calendar_uri, ".ics");
+    fprintf(stderr, "Event uri:\n%s\n", calendar_uri);
     char* response = caldav_req(date, calendar_uri, "PUT", postfields, 0);
     fprintf(stderr, "PUT event response:\n%s\n", response);
     fclose(fp);
-    free(file_buf);
+    free(descr);
+    free(folded_descr);
 
     if (response == NULL) {
         fprintf(stderr, "PUT event failed.\n");
     }
 }
 
+void* show_progress(void* vargp){
+    WINDOW* header = (WINDOW*) vargp;
+    mvwprintw(header, 0, COLS - CAL_WIDTH - ASIDE_WIDTH - 11, "   syncing ");
+    for(;;) {
+        mvwprintw(header, 0, COLS - CAL_WIDTH - ASIDE_WIDTH - 10, "|");
+        wrefresh(header);
+        usleep(200000);
+        mvwprintw(header, 0, COLS - CAL_WIDTH - ASIDE_WIDTH - 10, "/");
+        wrefresh(header);
+        usleep(200000);
+        mvwprintw(header, 0, COLS - CAL_WIDTH - ASIDE_WIDTH - 10, "-");
+        wrefresh(header);
+        usleep(200000);
+        mvwprintw(header, 0, COLS - CAL_WIDTH - ASIDE_WIDTH - 10, "\\");
+        wrefresh(header);
+        usleep(200000);
+    }
+}
+
 void caldav_sync(struct tm* date, WINDOW* header, WINDOW* cal, int pad_pos, const char* dir, size_t dir_size) {
+    pthread_t progress_tid;
+    pthread_create(&progress_tid, NULL, show_progress, (void*)header);
+
     // fetch existing API tokens
     char* tokfile = read_tokenfile();
     free(tokfile);
@@ -685,8 +714,13 @@ void caldav_sync(struct tm* date, WINDOW* header, WINDOW* cal, int pad_pos, cons
         perror("Stat failed");
         local_file_exists = false;
     }
-    fprintf(stderr, "Local file last modified time: %s\n", ctime(&attr.st_mtime));
-    fprintf(stderr, "Local file last modified time: %li\n", attr.st_mtime);
+    struct tm* localfile_time = gmtime(&attr.st_mtime);
+    fprintf(stderr, "Local dst: %i\n", localfile_time->tm_isdst);
+    //local_time->tm_isdst = -1;
+    time_t localfile_date = mktime(localfile_time);
+    //fprintf(stderr, "Local dst: %i\n", localfile_time->tm_isdst);
+    fprintf(stderr, "Local file last modified time: %s\n", ctime(&localfile_date));
+    //fprintf(stderr, "Local file last modified time: %s\n", ctime(&attr.st_mtime));
 
     struct tm remote_datetime;
     time_t remote_date;
@@ -700,7 +734,10 @@ void caldav_sync(struct tm* date, WINDOW* header, WINDOW* cal, int pad_pos, cons
         remote_file_exists = false;
     } else {
         strptime(remote_last_mod, "%Y%m%dT%H%M%SZ", &remote_datetime);
+        //remote_datetime.tm_isdst = -1;
+        //fprintf(stderr, "Remote dst: %i\n", remote_datetime.tm_isdst);
         remote_date = mktime(&remote_datetime);
+        fprintf(stderr, "Remote dst: %i\n", remote_datetime.tm_isdst);
         fprintf(stderr, "Remote last modified: %s\n", ctime(&remote_date));
     }
 
@@ -709,7 +746,10 @@ void caldav_sync(struct tm* date, WINDOW* header, WINDOW* cal, int pad_pos, cons
         return;
     }
 
-    double timediff = difftime(attr.st_mtime, remote_date);
+    // TODO: check SEQUENCE:24 ?
+    // update sequence on upload
+
+    double timediff = difftime(localfile_date, remote_date);
     fprintf(stderr, "Time diff between local and remote mod time:%e\n", timediff);
 
     if ((timediff > 0 && local_file_exists) || (local_file_exists && !remote_file_exists)) {
@@ -718,11 +758,18 @@ void caldav_sync(struct tm* date, WINDOW* header, WINDOW* cal, int pad_pos, cons
 
         if (remote_file_exists) {
             // purge any existing daily calendar entries on the remote side
-            sprintf(uri, "%s%s%s.ics", GOOGLE_API_URI, calendar_href, remote_uid);
-            caldav_req(date, uri, "DELETE", "", 0);
+            char event_uri[300];
+            sprintf(event_uri, "%s%s%s.ics", GOOGLE_API_URI, calendar_href, remote_uid);
+
+            caldav_req(date, event_uri, "DELETE", "", 0);
         }
+
         fprintf(stderr, "Local file is newer, uploading to remote...\n");
         put_event(date, dir, dir_size, uri);
+
+        pthread_cancel(progress_tid);
+        wclear(header);
+
     }
 
     char* rmt_desc;
@@ -741,9 +788,12 @@ void caldav_sync(struct tm* date, WINDOW* header, WINDOW* cal, int pad_pos, cons
         }
 
         // prepare header for confirmation dialogue
-        wclear(header);
+        //wclear(header);
         curs_set(2);
         noecho();
+
+        pthread_cancel(progress_tid);
+        wclear(header);
 
         // ask for confirmation
         strftime(dstr, sizeof dstr, CONFIG.fmt, date);
