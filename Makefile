@@ -1,10 +1,12 @@
 TARGET = diary
-SRC = utils.c caldav.c diary.c
+SRCDIR = src/
+_SRC = utils.c caldav.c diary.c
+SRC = $(addprefix $(SRCDIR), $(_SRC))
 PREFIX ?= /usr/local
 BINDIR ?= $(DESTDIR)$(PREFIX)/bin
 
 MANDIR := $(DESTDIR)$(PREFIX)/share/man
-MAN1 = diary.1
+MAN1 = man/diary.1
 
 CC = gcc
 CFLAGS = -Wall \
