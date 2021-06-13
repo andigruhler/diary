@@ -90,10 +90,10 @@ Note: for *BSD users run gmake.
 
 ## Configuration File
 
-The [`diary.cfg`](./diary.cfg) configuration file can optionally be used to persist diary configuration. To install the sample from this repository:
+The [`diary.cfg`](./config/diary.cfg) configuration file can optionally be used to persist diary configuration. To install the sample from this repository:
 ```bash
 mkdir -p ${XDG_CONFIG_HOME:-~/.config}/diary
-cp diary.cfg ${XDG_CONFIG_HOME:-~/.config}/diary/
+cp config/diary.cfg ${XDG_CONFIG_HOME:-~/.config}/diary/
 ```
 
 The file `${XDG_CONFIG_HOME:-~/.config}/diary/diary.cfg` should adhere to a basic `key = value` format. Lines can be commented with the special characters `#` or `;`. The following configuration keys are currently supported:
