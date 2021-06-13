@@ -79,6 +79,8 @@ char* fold(const char* str) {
 }
 
 char* unfold(const char* str) {
+    if (strcmp(str, "\n")) return NULL;
+
     // work on a copy of the str
     char* strcp = (char *) malloc(strlen(str) * sizeof(char));
     strcpy(strcp, str);
@@ -132,26 +134,27 @@ char* extract_ical_field(const char* ics, char* key, bool multiline) {
     }
 
     // work on a copy of the ical xml response
-    char* field = (char *) malloc(strlen(ics) * sizeof(char));
-    strcpy(field, ics);
+    char* icscp= (char *) malloc(strlen(ics) * sizeof(char));
+    strcpy(icscp, ics);
 
-    char* res = strtok(field, "\n");
+    // tokenize ical by newlines
+    char* res = strtok(icscp, "\n");
 
     while (res != NULL) {
         if (regexec(&re, res, 1, pm, 0) == 0) {
             res = strstr(res, ":"); // value
             res++; // strip the ":"
+
+            if (multiline) {
+                res = unfold(ics + (res - icscp));
+            }
             break;
         }
         // key not in this line, advance line
         res = strtok(NULL, "\n");
     }
 
-    if (multiline) {
-        res = unfold(ics + (res - field));
-    }
-
-    free(field);
+    free(icscp);
     return res;
 }
 

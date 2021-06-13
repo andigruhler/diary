@@ -648,6 +648,8 @@ void caldav_sync(struct tm* date, WINDOW* header, WINDOW* cal, int pad_pos, cons
         access_token = NULL;
         free(refresh_token);
         refresh_token = NULL;
+        pthread_cancel(progress_tid);
+        wclear(header);
         return;
     }
 
@@ -743,6 +745,8 @@ void caldav_sync(struct tm* date, WINDOW* header, WINDOW* cal, int pad_pos, cons
 
     if (! (local_file_exists || remote_file_exists)) {
         fprintf(stderr, "Neither local nor remote file exists, giving up.\n");
+        pthread_cancel(progress_tid);
+        wclear(header);
         return;
     }
 
@@ -777,13 +781,12 @@ void caldav_sync(struct tm* date, WINDOW* header, WINDOW* cal, int pad_pos, cons
     int conf_ch;
     if ((timediff < 0 && remote_file_exists) || (!local_file_exists && remote_file_exists)) {
         rmt_desc = extract_ical_field(event, "DESCRIPTION", true);
-        // todo: fix bug, DESCRIPTION is literally "LAST-MODIFIED:20210602T210152Z"
-        // (next line) whenever DESCRIPTION is empty
-
         fprintf(stderr, "Remote event description:%s\n", rmt_desc);
 
         if (rmt_desc == NULL) {
-            fprintf(stderr, "Failed to fetch description of remote event.\n");
+            fprintf(stderr, "Failed to fetch description of remote event. Might be empty.\n");
+            pthread_cancel(progress_tid);
+            wclear(header);
             return;
         }
 
