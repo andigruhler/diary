@@ -178,16 +178,22 @@ environment ($LANG, see man locale), unless specified otherwise via the '--weekd
 .nf
 # start with weekday=3(Wed), overrule any other configuration value
 diary -w3
+
 # start with glibc derived weekday=1, regardless of 'weekday' in config file
 LANG=de_CH diary
+
 # if glibc is installed, start with glibc derived base date (weekday=0)
 LANG= diary
+
 # disable environment variable, default to value from config file
 unset LANG
+
 # start with 'weekday' default from config file, if available
 diary
+
 # remove config file
 rm ${XDG_CONFIG_HOME:-~/.config}/diary/diary.cfg
+
 # start with 'weekday' default value from source code (1=Mon)
 diary
 .fi
