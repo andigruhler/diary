@@ -1,3 +1,4 @@
 diary
 *.o
 *.gch
+*.swp
