@@ -2,7 +2,7 @@
 
 This is a text-based diary, inspired by [khal](https://github.com/pimutils/khal). Journal entries are stored in text files.
 
-![Diary Demo](https://raw.githubusercontent.com/in0rdr/diary/master/demo.gif)
+![Diary Demo](https://raw.githubusercontent.com/in0rdr/diary/master/img/demo.gif)
 
 ## Usage
 1. Set the EDITOR environment variable to your favourite text editor:
@@ -46,7 +46,7 @@ This is a text-based diary, inspired by [khal](https://github.com/pimutils/khal)
     q         quit the program
     ```
 
-![diary cheet sheet](https://raw.githubusercontent.com/in0rdr/diary/master/diary-cheat-sheet.png)
+![diary cheet sheet](https://raw.githubusercontent.com/in0rdr/diary/master/img/diary-cheat-sheet.png)
 
 ## Install
 
