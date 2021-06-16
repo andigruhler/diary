@@ -15,7 +15,11 @@ void update_date(WINDOW* header, struct tm* curs_date) {
 
 char* extract_json_value(const char* json, char* key, bool quoted) {
     // work on a copy of the json
-    char* jsoncp = (char*) malloc(strlen(json) * sizeof(char));
+    char* jsoncp = (char*) malloc(strlen(json) * sizeof(char) + 1);
+    if (jsoncp == NULL) {
+        perror("malloc failed");
+        return NULL;
+    }
     strcpy(jsoncp, json);
 
     char* tok = strtok(jsoncp, " ");
@@ -37,7 +41,11 @@ char* extract_json_value(const char* json, char* key, bool quoted) {
 
     char* res = NULL;
     if (tok != NULL) {
-        res = (char*) malloc(strlen(tok) * sizeof(char));
+        res = (char*) malloc(strlen(tok) * sizeof(char) + 1);
+        if (res == NULL) {
+            perror("malloc failed");
+            return NULL;
+        }
         strcpy(res, tok);
     }
 
@@ -47,49 +55,128 @@ char* extract_json_value(const char* json, char* key, bool quoted) {
 
 char* fold(const char* str) {
     // work on a copy of the str
-    int strl = strlen(str);
-    char* strcp = (char *) malloc(strl * sizeof(char));
+    char* strcp = (char *) malloc(strlen(str) * sizeof(char) + 1);
+    if (strcp == NULL) {
+        perror("malloc failed");
+        return NULL;
+    }
     strcpy(strcp, str);
 
-    if (strlen(strcp) <= 75) return strcp;
-
+    // create buffer for escaped result TEXT
     char* buf = malloc(1);
-    buf = '\0';
-    size_t bufl = 0;
-
-    // break lines after 75 chars
-    for (char* i = strcp; i-strcp < strl; i += 75) {
-        // split between any two characters by inserting a CRLF
-        // immediately followed by a white space character
-        fprintf(stderr, "next size: %li\n", bufl + 77);
-        fprintf(stderr, "buf: %s\n", buf);
-        buf = realloc(buf, bufl + 77);
-        if (buf == NULL) {
-            perror("realloc failed");
-            return buf;
-        }
-        strncat(buf, i, 75);
-        buf[i - strcp] = '\n';
-        buf[i - strcp + 1] = ' ';
-        bufl = strlen(buf);
+    if (buf == NULL) {
+        perror("malloc failed");
+        return NULL;
     }
+    buf[0] = '\0';
+
+    void* newbuf;
+    // bufl is the current buffer size incl. \0
+    int bufl = 1;
+    // i is the iterator in strcp
+    char* i = strcp;
+    // escch is the char to be escaped,
+    // only written when esc=true
+    char escch;
+    bool esc = false;
+
+    while(*i != '\0' || esc) {
+        fprintf(stderr, "strlen(buf): %i\n", bufl);
+        fprintf(stderr, "*i: %c\n", *i);
+        fprintf(stderr, "escch: %c\n", escch);
+        fprintf(stderr, "esc: %i\n", esc);
+        fprintf(stderr, "buffer: %s\n\n", buf);
+
+        newbuf = realloc(buf, ++bufl);
+        if (newbuf == NULL) {
+            perror("realloc failed");
+            free(buf);
+            return NULL;
+        }
+        buf = (char*) newbuf;
+
+        if ((bufl > 1) && ((bufl % 77) == 0)) {
+            // break lines after 75 chars
+            // split between any two characters by inserting a CRLF
+            // immediately followed by a white space character
+            buf[bufl-2] = '\n';
+            escch = ' ';
+            esc = true;
+            continue;
+        }
+
+        if (esc) {
+            // only escape char, do not advance iterator i
+            buf[bufl-2] = escch;
+            esc = false;
+        } else {
+            // escape characters
+            // https://datatracker.ietf.org/doc/html/rfc5545#section-3.3.11
+            switch (*i) {
+                case 0x5c: // backslash
+                    buf[bufl-2] = 0x5c;
+                    escch = 0x5c;
+                    esc = true;
+                    break;
+                case ';':
+                    buf[bufl-2] = 0x5c;
+                    escch = ';';
+                    esc = true;
+                    break;
+                case ',':
+                    buf[bufl-2] = 0x5c;
+                    escch = ',';
+                    esc = true;
+                    break;
+                case '\n':
+                    buf[bufl-2] = 0x5c;
+                    escch = 'n';
+                    esc = true;
+                    break;
+                default:
+                    // write regular character from strcp
+                    buf[bufl-2] = *i;
+                    break;
+            }
+            i++;
+        }
+
+        // terminate the char string in any case (esc or not)
+        buf[bufl-1] = '\0';
+    }
+
+    fprintf(stderr, "escch: %c\n", escch);
+    fprintf(stderr, "end: %c\n", buf[bufl]);
 
     free(strcp);
     return buf;
 }
 
 char* unfold(const char* str) {
-    if (strcmp(str, "\n")) return NULL;
+    fprintf(stderr, "Before unfolding: %s\n", str);
+    //if (strcmp(str, "")) {
+    //    fputs("Unfold string is empty.\n", stderr);
+    //    return NULL;
+    //}
 
     // work on a copy of the str
-    char* strcp = (char *) malloc(strlen(str) * sizeof(char));
+    char* strcp = (char *) malloc(strlen(str) * sizeof(char) + 1);
+    if (strcp == NULL) {
+        perror("malloc failed");
+        return NULL;
+    }
     strcpy(strcp, str);
 
     char* res = strtok(strcp, "\n");
 
-    char* buf = malloc(strlen(res));
+    char* buf = malloc(strlen(res) + 1);
+    if (buf == NULL) {
+        perror("malloc failed");
+        return NULL;
+    }
     strcpy(buf, res);
 
+    char* newbuf;
     regex_t re;
     regmatch_t pm[1];
 
@@ -107,12 +194,14 @@ char* unfold(const char* str) {
             break;
         }
 
-        buf = realloc(buf, strlen(buf) + strlen(res));
-        if (buf != NULL) {
-            strcat(buf, res + 1);
-        } else {
+        newbuf = realloc(buf, strlen(buf) + strlen(res) + 1);
+        if (buf == NULL) {
             perror("realloc failed");
+            free(buf);
             return NULL;
+        } else {
+            buf = newbuf;
+            strcat(buf, res + 1);
         }
     }
 
@@ -134,7 +223,11 @@ char* extract_ical_field(const char* ics, char* key, bool multiline) {
     }
 
     // work on a copy of the ical xml response
-    char* icscp= (char *) malloc(strlen(ics) * sizeof(char));
+    char* icscp = (char *) malloc(strlen(ics) * sizeof(char) + 1);
+    if (icscp == NULL) {
+        perror("malloc failed");
+        return NULL;
+    }
     strcpy(icscp, ics);
 
     // tokenize ical by newlines
@@ -145,7 +238,13 @@ char* extract_ical_field(const char* ics, char* key, bool multiline) {
             res = strstr(res, ":"); // value
             res++; // strip the ":"
 
-            if (multiline) {
+            fprintf(stderr, "Extracted ical result value: %s\n", res);
+            fprintf(stderr, "Extracted ical result size: %li\n", strlen(res));
+
+            if (strlen(res) == 0) {
+                // empty remote description
+                res = NULL;
+            } else if (multiline) {
                 res = unfold(ics + (res - icscp));
             }
             break;
@@ -153,6 +252,7 @@ char* extract_ical_field(const char* ics, char* key, bool multiline) {
         // key not in this line, advance line
         res = strtok(NULL, "\n");
     }
+    fprintf(stderr, "Sizeof ics: %li\n", strlen(ics));
 
     free(icscp);
     return res;

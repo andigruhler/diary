@@ -121,6 +121,9 @@ char* read_tokenfile() {
         fprintf(stderr, "Access token: %s\n", access_token);
         fprintf(stderr, "Token TTL: %i\n", token_ttl);
         fprintf(stderr, "Refresh token: %s\n", refresh_token);
+    } else {
+        perror("malloc failed");
+        return NULL;
     }
     fclose(token_file);
     return token_buf;
@@ -395,6 +398,10 @@ char* caldav_req(struct tm* date, char* url, char* http_method, char* postfields
     // https://curl.se/libcurl/c/getinmemory.html
     struct curl_mem_chunk caldav_resp;
     caldav_resp.memory = malloc(1);
+    if (caldav_resp.memory == NULL) {
+        perror("malloc failed");
+        return NULL;
+    }
     caldav_resp.size = 0;
 
     if (curl) {
@@ -426,11 +433,11 @@ char* caldav_req(struct tm* date, char* url, char* http_method, char* postfields
 
         curl_easy_cleanup(curl);
 
-        //fprintf(stderr, "Curl retrieved %lu bytes\n", (unsigned long)caldav_resp.size);
-        //fprintf(stderr, "Curl content: %s\n", caldav_resp.memory);
+        fprintf(stderr, "Curl retrieved %lu bytes\n", (unsigned long)caldav_resp.size);
+        fprintf(stderr, "Curl content: %s\n", caldav_resp.memory);
 
         if (res != CURLE_OK) {
-            //fprintf(stderr, "Curl response: %s\n", caldav_resp.memory);
+            fprintf(stderr, "Curl response: %s\n", caldav_resp.memory);
             fprintf(stderr, "curl_easy_perform() failed: %s\n", curl_easy_strerror(res));
             return NULL;
         }
@@ -447,7 +454,7 @@ char* parse_caldav_current_user_principal(char* xml) {
         return NULL;
     }
 
-    //fprintf(stderr, "Found current-user-principal at position: %i\n", *xml_key_pos);
+    fprintf(stderr, "Found current-user-principal at position: %i\n", *xml_key_pos);
 
     //<D:current-user-principal>
     //<D:href>/caldav/v2/diary.in0rdr%40gmail.com/user</D:href>
@@ -489,12 +496,12 @@ char* parse_caldav_calendar(char* xml, char* calendar) {
     *displayname_pos= '\0';
     char* href = strrstr(xml, "<D:href>");
     if (href != NULL) {
-        //fprintf(stderr, "Found calendar href: %s\n", href);
+        fprintf(stderr, "Found calendar href: %s\n", href);
         href = strtok(href, "<"); // :href>/caldav/v2/aaa%40group.calendar.google.com/events/
         if (href != NULL) {
             href = strchr(href, '>');
             href++; // cut >
-            //fprintf(stderr, "Found calendar href: %s\n", href);
+            fprintf(stderr, "Found calendar href: %s\n", href);
         }
         return href;
     }
@@ -521,15 +528,28 @@ void put_event(struct tm* date, const char* dir, size_t dir_size, char* calendar
     descr_bytes = ftell(fp);
     rewind(fp);
 
-    descr = malloc(descr_bytes);
-    if (descr == NULL) perror("Error allocating space for description");
+    size_t descr_labell = strlen("DESCRIPTION:");
+    size_t descrl = descr_bytes + descr_labell;
+    descr = malloc(descrl);
+    if (descr == NULL) {
+        perror("malloc failed");
+        return;
+    }
 
-    fread(descr, sizeof(char), descr_bytes, fp);
-    descr[descr_bytes] = '\0';
+    descr[0] = '\0';
+    strcat(descr, "DESCRIPTION:");
+
+    int items_read = fread(descr + descr_labell, sizeof(char), descr_bytes, fp);
+    if (items_read != descr_bytes) {
+        fprintf(stderr, "Read %i items but expected %li, aborting.", items_read, descr_bytes);
+        return;
+    }
+
+    descr[descrl] = '\0';
     fprintf(stderr, "File buffer that will be uploaded to the remote CalDAV server:\n%s\n", descr);
 
     char* folded_descr = fold(descr);
-    fprintf(stderr, "Folded descr:\n%s\n", folded_descr);
+    fprintf(stderr, "Folded descr:%s\n", folded_descr);
 
     char uid[9];
     strftime(uid, sizeof uid, "%Y%m%d", date);
@@ -539,7 +559,7 @@ void put_event(struct tm* date, const char* dir, size_t dir_size, char* calendar
                 "UID:%s\n"
                 "DTSTART;VALUE=DATE:%s\n"
                 "SUMMARY:%s\n"
-                "DESCRIPTION:%s\n"
+                "%s\n"
                 "END:VEVENT\n"
                 "END:VCALENDAR";
     char postfields[strlen(ics) + strlen(folded_descr) + 100];
@@ -547,7 +567,7 @@ void put_event(struct tm* date, const char* dir, size_t dir_size, char* calendar
             uid,
             uid,
             uid, // todo: display first few chars of DESCRIPTION as SUMMARY
-            folded_descr); //todo: fold multiline descriptions
+            folded_descr);
 
     fprintf(stderr, "PUT event postfields:\n%s\n", postfields);
 
@@ -661,7 +681,7 @@ void caldav_sync(struct tm* date, WINDOW* header, WINDOW* cal, int pad_pos, cons
     sprintf(uri, "%s%s", GOOGLE_API_URI, user_principal);
     fprintf(stderr, "\nHome Set URI: %s\n", uri);
     char* home_set = caldav_req(date, uri, "PROPFIND", "", 1);
-    //fprintf(stderr, "\nHome Set: %s\n", home_set);
+    fprintf(stderr, "\nHome Set: %s\n", home_set);
 
     // get calendar URI from the home-set
     char* calendar_href = parse_caldav_calendar(home_set, CONFIG.google_calendar);
@@ -720,9 +740,9 @@ void caldav_sync(struct tm* date, WINDOW* header, WINDOW* cal, int pad_pos, cons
     fprintf(stderr, "Local dst: %i\n", localfile_time->tm_isdst);
     //local_time->tm_isdst = -1;
     time_t localfile_date = mktime(localfile_time);
-    //fprintf(stderr, "Local dst: %i\n", localfile_time->tm_isdst);
+    fprintf(stderr, "Local dst: %i\n", localfile_time->tm_isdst);
     fprintf(stderr, "Local file last modified time: %s\n", ctime(&localfile_date));
-    //fprintf(stderr, "Local file last modified time: %s\n", ctime(&attr.st_mtime));
+    fprintf(stderr, "Local file last modified time: %s\n", ctime(&attr.st_mtime));
 
     struct tm remote_datetime;
     time_t remote_date;
@@ -737,7 +757,7 @@ void caldav_sync(struct tm* date, WINDOW* header, WINDOW* cal, int pad_pos, cons
     } else {
         strptime(remote_last_mod, "%Y%m%dT%H%M%SZ", &remote_datetime);
         //remote_datetime.tm_isdst = -1;
-        //fprintf(stderr, "Remote dst: %i\n", remote_datetime.tm_isdst);
+        fprintf(stderr, "Remote dst: %i\n", remote_datetime.tm_isdst);
         remote_date = mktime(&remote_datetime);
         fprintf(stderr, "Remote dst: %i\n", remote_datetime.tm_isdst);
         fprintf(stderr, "Remote last modified: %s\n", ctime(&remote_date));
@@ -749,9 +769,6 @@ void caldav_sync(struct tm* date, WINDOW* header, WINDOW* cal, int pad_pos, cons
         wclear(header);
         return;
     }
-
-    // TODO: check SEQUENCE:24 ?
-    // update sequence on upload
 
     double timediff = difftime(localfile_date, remote_date);
     fprintf(stderr, "Time diff between local and remote mod time:%e\n", timediff);
@@ -768,7 +785,7 @@ void caldav_sync(struct tm* date, WINDOW* header, WINDOW* cal, int pad_pos, cons
             caldav_req(date, event_uri, "DELETE", "", 0);
         }
 
-        fprintf(stderr, "Local file is newer, uploading to remote...\n");
+        fputs("Local file is newer, uploading to remote...\n", stderr);
         put_event(date, dir, dir_size, uri);
 
         pthread_cancel(progress_tid);
@@ -784,7 +801,7 @@ void caldav_sync(struct tm* date, WINDOW* header, WINDOW* cal, int pad_pos, cons
         fprintf(stderr, "Remote event description:%s\n", rmt_desc);
 
         if (rmt_desc == NULL) {
-            fprintf(stderr, "Failed to fetch description of remote event. Might be empty.\n");
+            fprintf(stderr, "Could not fetch description of remote event.\n");
             pthread_cancel(progress_tid);
             wclear(header);
             return;
