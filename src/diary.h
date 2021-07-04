@@ -35,4 +35,6 @@ void edit_cmd(const char* dir, size_t dir_size, const struct tm* date, char** rc
 
 bool date_has_entry(const char* dir, size_t dir_size, const struct tm* i);
 
+extern config CONFIG;
+
 #endif

@@ -51,4 +51,6 @@ struct curl_mem_chunk {
     size_t size;
 };
 
+extern config CONFIG;
+
 #endif
