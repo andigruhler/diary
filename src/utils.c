@@ -273,8 +273,9 @@ char* expand_path(const char* str) {
 // Get last occurence of string in string
 // https://stackoverflow.com/questions/20213799/finding-last-occurence-of-string
 char* strrstr(char *haystack, char *needle) {
+    char *i;
     int nlen = strlen(needle);
-    for (char* i = haystack + strlen(haystack) - nlen; i >= haystack; i--) {
+    for (i = haystack + strlen(haystack) - nlen; i >= haystack; i--) {
         if (strncmp(i, needle, nlen) == 0) {
             return i;
         }
