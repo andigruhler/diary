@@ -6,7 +6,7 @@ PREFIX ?= /usr/local
 BINDIR ?= $(DESTDIR)$(PREFIX)/bin
 
 MANDIR := $(DESTDIR)$(PREFIX)/share/man
-MAN1 = man/diary.1
+MAN1 = man1/diary.1
 
 CC = gcc
 CFLAGS = -Wall \
@@ -38,8 +38,8 @@ clean:
 install: $(TARGET)
 	cp $(TARGET) $(BINDIR)/$(TARGET)
 	install -d $(MANDIR)/man1
-	install -m644 $(MAN1) $(MANDIR)/man1/$(MAN1)
+	install -m644 $(MAN1) $(MANDIR)/$(MAN1)
 
 uninstall:
 	rm -f $(BINDIR)/$(TARGET)
-	rm -f $(MANDIR)/man1/$(MAN1)
+	rm -f $(MANDIR)/$(MAN1)
