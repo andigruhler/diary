@@ -154,12 +154,13 @@ void write_tokenfile() {
     chmod(tokenfile_path, S_IRUSR|S_IWUSR);
     perror("chmod");
 
+
     char* tokfile = read_tokenfile();
-    free(tokfile);
     fprintf(stderr, "New tokenfile contents: %s\n", tokfile);
     fprintf(stderr, "New Access token: %s\n", access_token);
     fprintf(stderr, "New Token TTL: %i\n", token_ttl);
     fprintf(stderr, "Refresh token: %s\n", refresh_token);
+    free(tokfile);
 }
 
 void get_access_token(char* code, char* verifier, bool refresh) {
