@@ -1,7 +1,12 @@
+<p align="center">
+<img src="./img/diary-worm.png" width="250px" />
+</p>
+
 # Diary
 
 This is a text-based diary, inspired by [khal](https://github.com/pimutils/khal). Journal entries are stored in text files.
 
+## Demo
 ![Diary Demo](https://raw.githubusercontent.com/in0rdr/diary/master/img/demo.gif)
 
 ## Usage
