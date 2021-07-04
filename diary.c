@@ -261,15 +261,15 @@ struct tm find_closest_entry(const struct tm current,
     int step = search_backwards ? -1 : +1;
 
     struct tm it = current;
+    it.tm_mday += step;
     time_t it_time = mktime(&it);
 
     for( ; it_time >= start_time && it_time <= end_time; it_time = mktime(&it)) {
-        it.tm_mday += step;
 
         if (date_has_entry(diary_dir, diary_dir_size, &it)) {
             return it;
         }
-
+        it.tm_mday += step;
     }
 
     return current;
