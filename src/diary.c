@@ -12,8 +12,7 @@ struct tm cal_end;
 // unless it is divisible by 400
 #define is_leap(yr) ((yr % 400 == 0) || (yr % 4 == 0 && yr % 100 != 0))
 
-void setup_cal_timeframe()
-{
+void setup_cal_timeframe() {
     raw_time = time(NULL);
     localtime_r(&raw_time, &today);
     curs_date = today;
@@ -39,8 +38,7 @@ void setup_cal_timeframe()
     mktime(&cal_end);
 }
 
-void draw_wdays(WINDOW* head)
-{
+void draw_wdays(WINDOW* head) {
     int i;
     for (i = CONFIG.weekday; i < CONFIG.weekday + 7; i++) {
         waddstr(head, WEEKDAYS[i % 7]);
@@ -49,8 +47,7 @@ void draw_wdays(WINDOW* head)
     wrefresh(head);
 }
 
-void draw_calendar(WINDOW* number_pad, WINDOW* month_pad, const char* diary_dir, size_t diary_dir_size)
-{
+void draw_calendar(WINDOW* number_pad, WINDOW* month_pad, const char* diary_dir, size_t diary_dir_size) {
     struct tm i = cal_start;
     char month[10];
     bool has_entry;
@@ -80,20 +77,7 @@ void draw_calendar(WINDOW* number_pad, WINDOW* month_pad, const char* diary_dir,
     }
 }
 
-/* Update the header with the cursor date */
-void update_date(WINDOW* header)
-{
-    char dstr[16];
-    mktime(&curs_date);
-    get_date_str(&curs_date, dstr, sizeof dstr);
-
-    wclear(header);
-    mvwaddstr(header, 0, 0, dstr);
-    wrefresh(header);
-}
-
-bool go_to(WINDOW* calendar, WINDOW* aside, time_t date, int* cur_pad_pos)
-{
+bool go_to(WINDOW* calendar, WINDOW* aside, time_t date, int* cur_pad_pos) {
     if (date < mktime(&cal_start) || date > mktime(&cal_end))
         return false;
 
@@ -128,8 +112,7 @@ bool go_to(WINDOW* calendar, WINDOW* aside, time_t date, int* cur_pad_pos)
 }
 
 /* Update window 'win' with diary entry from date 'date' */
-void display_entry(const char* dir, size_t dir_size, const struct tm* date, WINDOW* win, int width)
-{
+void display_entry(const char* dir, size_t dir_size, const struct tm* date, WINDOW* win, int width) {
     char path[100];
     char* ppath = path;
     int c;
@@ -157,8 +140,7 @@ void display_entry(const char* dir, size_t dir_size, const struct tm* date, WIND
 }
 
 /* Writes edit command for 'date' entry to 'rcmd'. '*rcmd' is NULL on error. */
-void edit_cmd(const char* dir, size_t dir_size, const struct tm* date, char** rcmd, size_t rcmd_size)
-{
+void edit_cmd(const char* dir, size_t dir_size, const struct tm* date, char** rcmd, size_t rcmd_size) {
     // set the edit command to env editor
     if (strlen(CONFIG.editor) + 2 > rcmd_size) {
         fprintf(stderr, "Binary path of default editor too long");
@@ -187,8 +169,7 @@ void edit_cmd(const char* dir, size_t dir_size, const struct tm* date, char** rc
     strcat(*rcmd, path);
 }
 
-bool date_has_entry(const char* dir, size_t dir_size, const struct tm* i)
-{
+bool date_has_entry(const char* dir, size_t dir_size, const struct tm* i) {
     char epath[100];
     char* pepath = epath;
 
@@ -203,47 +184,6 @@ bool date_has_entry(const char* dir, size_t dir_size, const struct tm* i)
     return (access(epath, F_OK) != -1);
 }
 
-void get_date_str(const struct tm* date, char* date_str, size_t date_str_size)
-{
-    strftime(date_str, date_str_size, CONFIG.fmt, date);
-}
-
-/* Writes file path for 'date' entry to 'rpath'. '*rpath' is NULL on error. */
-void fpath(const char* dir, size_t dir_size, const struct tm* date, char** rpath, size_t rpath_size)
-{
-    // check size of result path
-    if (dir_size + 1 > rpath_size) {
-        fprintf(stderr, "Directory path too long");
-        *rpath = NULL;
-        return;
-    }
-
-    // add path of the diary dir to result path
-    strcpy(*rpath, dir);
-
-    // check for terminating '/' in path
-    if (dir[dir_size - 1] != '/') {
-        // check size again to accommodate '/'
-        if (dir_size + 1 > rpath_size) {
-            fprintf(stderr, "Directory path too long");
-            *rpath = NULL;
-            return;
-        }
-        strcat(*rpath, "/");
-    }
-
-    char dstr[16];
-    get_date_str(date, dstr, sizeof dstr);
-
-    // append date to the result path
-    if (strlen(*rpath) + strlen(dstr) > rpath_size) {
-        fprintf(stderr, "File path too long");
-        *rpath = NULL;
-        return;
-    }
-    strcat(*rpath, dstr);
-}
-
 /*
  * Finds the date with a diary entry closest to <current>.
  * Depending on <search_backwards>, it will find the most recent
@@ -253,8 +193,7 @@ void fpath(const char* dir, size_t dir_size, const struct tm* date, char** rpath
 struct tm find_closest_entry(const struct tm current,
                              bool search_backwards,
                              const char* diary_dir,
-                             size_t diary_dir_size)
-{
+                             size_t diary_dir_size) {
     time_t end_time = mktime(&cal_end);
     time_t start_time = mktime(&cal_start);
 
@@ -265,7 +204,6 @@ struct tm find_closest_entry(const struct tm current,
     time_t it_time = mktime(&it);
 
     for( ; it_time >= start_time && it_time <= end_time; it_time = mktime(&it)) {
-
         if (date_has_entry(diary_dir, diary_dir_size, &it)) {
             return it;
         }
@@ -275,19 +213,13 @@ struct tm find_closest_entry(const struct tm current,
     return current;
 }
 
-bool read_config(const char* file_path)
-{
-    wordexp_t config_file_path_wordexp;
+bool read_config(const char* file_path) {
+    char* expaned_value;
     char config_file_path[256];
 
-    if ( wordexp( file_path, &config_file_path_wordexp, 0 ) == 0) {
-        if (strlen(config_file_path_wordexp.we_wordv[0]) + 1 > sizeof config_file_path) {
-            fprintf(stderr, "Config file path '%s' too long\n", config_file_path_wordexp.we_wordv[0]);
-            return false;
-        }
-        strcpy(config_file_path, config_file_path_wordexp.we_wordv[0]);
-    }
-    wordfree(&config_file_path_wordexp);
+    expaned_value = expand_path(file_path);
+    strcpy(config_file_path, expaned_value);
+    free(expaned_value);
 
     // check if config file is readable
     if( access( config_file_path, R_OK ) != 0 ) {
@@ -308,13 +240,9 @@ bool read_config(const char* file_path)
 
         if (sscanf(line, "%s = %s", key_buf, value_buf) == 2) {
             if (strcmp("dir", key_buf) == 0) {
-                wordexp_t diary_dir_wordexp;
-                if ( wordexp( value_buf, &diary_dir_wordexp, 0 ) == 0) {
-                    // set expanded diary directory path from config file
-                    CONFIG.dir = (char *) calloc(strlen(diary_dir_wordexp.we_wordv[0]) + 1, sizeof(char));
-                    strcpy(CONFIG.dir, diary_dir_wordexp.we_wordv[0]);
-                }
-                wordfree(&diary_dir_wordexp);
+                expaned_value = expand_path(value_buf);
+                strcpy(CONFIG.dir, expaned_value);
+                free(expaned_value);
             } else if (strcmp("range", key_buf) == 0) {
                 CONFIG.range = atoi(value_buf);
             } else if (strcmp("weekday", key_buf) == 0) {
@@ -325,6 +253,19 @@ bool read_config(const char* file_path)
             } else if (strcmp("editor", key_buf) == 0) {
                 CONFIG.editor = (char *) malloc(strlen(value_buf) + 1 * sizeof(char));
                 strcpy(CONFIG.editor, value_buf);
+            } else if (strcmp("google_tokenfile", key_buf) == 0) {
+                expaned_value = expand_path(value_buf);
+                strcpy(CONFIG.google_tokenfile, expaned_value);
+                free(expaned_value);
+            } else if (strcmp("google_clientid", key_buf) == 0) {
+                CONFIG.google_clientid = (char *) malloc(strlen(value_buf) + 1 * sizeof(char));
+                strcpy(CONFIG.google_clientid, value_buf);
+            } else if (strcmp("google_secretid", key_buf) == 0) {
+                CONFIG.google_secretid = (char *) malloc(strlen(value_buf) + 1 * sizeof(char));
+                strcpy(CONFIG.google_secretid, value_buf);
+            } else if (strcmp("google_calendar", key_buf) == 0) {
+                CONFIG.google_calendar = (char *) malloc(strlen(value_buf) + 1 * sizeof(char));
+                strcpy(CONFIG.google_calendar, value_buf);
             }
         }
     }
@@ -335,7 +276,7 @@ bool read_config(const char* file_path)
 void usage() {
   printf("Usage : diary [OPTION]... [DIRECTORY]...\n");
   printf("\n");
-  printf("Simple CLI diary (v%s)\n", DIARY_VERSION);
+  printf("Diary, journaling TUI (v%s)\n", DIARY_VERSION);
   printf("Edit journal entries from the command line\n");
   printf("\n");
   printf("Options:\n");
@@ -521,7 +462,7 @@ int main(int argc, char** argv) {
 
     WINDOW* header = newwin(1, COLS - CAL_WIDTH - ASIDE_WIDTH, 0, ASIDE_WIDTH + CAL_WIDTH);
     wattron(header, A_BOLD);
-    update_date(header);
+    update_date(header, &curs_date);
     WINDOW* wdays = newwin(1, 3 * 7, 0, ASIDE_WIDTH);
     draw_wdays(wdays);
 
@@ -558,6 +499,9 @@ int main(int argc, char** argv) {
         char pth[100];
         char* ppth = pth;
         char dstr[16];
+        time_t end_time = mktime(&cal_end);
+        struct tm it = cal_start;
+        time_t it_time = mktime(&it);
         edit_cmd(CONFIG.dir, diary_dir_size, &new_date, &pecmd, sizeof ecmd);
 
         switch(ch) {
@@ -606,8 +550,8 @@ int main(int argc, char** argv) {
                 mv_valid = go_to(cal, aside, mktime(&new_date), &pad_pos);
                 break;
 
-            // search for specific date
-            case 's':
+            // find specific date
+            case 'f':
                 wclear(header);
                 curs_set(2);
                 mvwprintw(header, 0, 0, "Go to date [YYYY-MM-DD]: ");
@@ -620,7 +564,6 @@ int main(int argc, char** argv) {
                     mv_valid = go_to(cal, aside, mktime(&new_date), &pad_pos);
                 }
                 curs_set(0);
-                //update_date(header);
                 break;
             // today shortcut
             case 't':
@@ -644,7 +587,7 @@ int main(int argc, char** argv) {
                     noecho();
 
                     // ask for confirmation
-                    get_date_str(&curs_date, dstr, sizeof dstr);
+                    strftime(dstr, sizeof dstr, CONFIG.fmt, &curs_date);
                     mvwprintw(header, 0, 0, "Delete entry '%s'? [Y/n] ", dstr);
                     bool conf = false;
                     while (!conf) {
@@ -658,7 +601,7 @@ int main(int argc, char** argv) {
                                          LINES - 1, ASIDE_WIDTH + CAL_WIDTH);
                             }
                         } else if (conf_ch == 27 || conf_ch == 'n') {
-                            update_date(header);
+                            update_date(header, &curs_date);
                         }
                         break;
                     }
@@ -699,14 +642,39 @@ int main(int argc, char** argv) {
                 new_date = find_closest_entry(new_date, false, CONFIG.dir, diary_dir_size);
                 mv_valid = go_to(cal, aside, mktime(&new_date), &pad_pos);
                 break;
+            // Sync entry with CalDAV server.
+            // Show confirmation dialogue before overwriting local files
+            case 's':
+                caldav_sync(&curs_date, header, cal, pad_pos, CONFIG.dir, diary_dir_size, true);
+                break;
+            // Sync all entries with CalDAV server;
+            case 'S':
+                for( ; it_time <= end_time; it_time = mktime(&it)) {
+                    if (conf_ch == -1) {
+                        // sync error
+                        break;
+                    } else if (conf_ch == 'c') {
+                        // cancel all
+                        break;
+                    } else if (conf_ch == 'a') {
+                        // yes to (a)ll
+                        conf_ch = caldav_sync(&it, header, cal, pad_pos, CONFIG.dir, diary_dir_size, false);
+                    } else {
+                        // show confirmation dialogue before overwriting local files
+                        conf_ch = caldav_sync(&it, header, cal, pad_pos, CONFIG.dir, diary_dir_size, true);
+                    }
+                    it.tm_mday++;
+                }
+                break;
         }
 
         if (mv_valid) {
-            update_date(header);
+            update_date(header, &curs_date);
 
-            // adjust prev width (if terminal was resized in the mean time)
+            // adjust prev and header width (if terminal was resized in the mean time)
             prev_width = COLS - ASIDE_WIDTH - CAL_WIDTH;
             wresize(prev, prev_height, prev_width);
+            wresize(header, 1, prev_width);
 
             // read the diary
             display_entry(CONFIG.dir, diary_dir_size, &curs_date, prev, prev_width);

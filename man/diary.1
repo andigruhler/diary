@@ -1,6 +1,6 @@
 .TH DIARY 1
 .SH NAME
-diary \- Simple text-based diary program
+diary \- Text-based journaling program
 
 .SH SYNOPSIS
 .B diary
@@ -9,7 +9,7 @@ diary \- Simple text-based diary program
 
 .SH DESCRIPTION
 .B diary
-is a simple text-based program for managing journal entries.
+is a text-based program for managing journal entries.
 
 .SH OPTIONS
 .TP
@@ -50,24 +50,26 @@ tab(|);
 l l.
 Key(s)    | Action
 ======    | ======
-k, up     | go backward by 1 week
+e, Enter  | edit current entry
+d, x      | delete current entry
+s         | sync current entry with CalDAV server
+
+t         | jump to today
+f         | jump to or find specific day
+
 j, down   | go forward by 1 week
-h, left   | go backward by 1 day
-l, right  | go forward by 1 day
+k, up     | go backward by 1 week
+h, left   | go left by 1 day
+l, right  | go right by 1 day
 J         | go forward by 1 month
 K         | go backward by 1 month
-
-e, enter  | edit current entry
-d, x      | delete current entry
-q         | quit the program
 
 N         | go to the previous journal entry
 n         | go to the next journal entry
 g         | go to start of journal
 G         | go to end of journal
 
-t         | jump to today
-s         | jump to specific day
+q         | quit the program
 .TE
 
 .SH ENVIRONMENT
@@ -101,30 +103,39 @@ The diary binary
 An optional diary configuration file
 
 .SH CONFIGURATION FILE
-The diary.cfg configuration file can optionally be used to persist diary configuration.
+The diary.cfg configuration file can optionally be used to persist diary
+configuration. Use the '#' or ';' characters to comment lines.
 
 Create default config location:
 
 .nf
- $ mkdir -p ${XDG_CONFIG_HOME:-~/.config}/diary
+    mkdir -p ${XDG_CONFIG_HOME:-~/.config}/diary
 .fi
 
 Install an example config file with defaults:
 
+.in 0
 .nf
- $ echo '# Path that holds the journal text files
- #dir = ~/diary
- # Number of years to show before/after todays date
- range = 1
- # 0 = Sunday, 1 = Monday, ..., 6 = Saturday
- weekday = 1
- # Date and file format, change with care
- fmt = %Y-%m-%d
- # Editor to open journal files with
- editor = ""' | sed 's/^[[:space:]]*//' > ${XDG_CONFIG_HOME:-~/.config}/diary/diary.cfg
+tee ${XDG_CONFIG_HOME:-~/.config}/diary/diary.cfg <<EOF
+# Path that holds the journal text files
+#dir = ~/diary
+# Number of years to show before/after todays date
+range = 1
+# 0 = Sunday, 1 = Monday, ..., 6 = Saturday
+weekday = 1
+# Date and file format, change with care
+fmt = %Y-%m-%d
+# Editor to open journal files with
+editor =
+# Google calendar name for CalDAV sync
+#google_calendar =
+# Google OAuth2 clientid and secretid
+#google_clientid =
+#google_secretid =
+# Google OAuth2 tokenfile
+#google_tokenfile = ~/.diary-token
+EOF
 .fi
-
-Use the '#' or ';' characters to comment lines.
 
 .SH PRECEDENCE RULES
 
@@ -165,28 +176,28 @@ If glibc is installed, the first weekday defaults to the locale defined in the c
 environment ($LANG, see man locale), unless specified otherwise via the '--weekday'/'-w'.
 
 .nf
- # start with weekday=3(Wed), overrule any other configuration value
- $ diary -w3
+# start with weekday=3(Wed), overrule any other configuration value
+diary -w3
 
- # start with glibc derived weekday=1, regardless of 'weekday' in config file
- $ LANG=de_CH diary
+# start with glibc derived weekday=1, regardless of 'weekday' in config file
+LANG=de_CH diary
 
- # if glibc is installed, start with glibc derived base date (weekday=0)
- $ LANG= diary
+# if glibc is installed, start with glibc derived base date (weekday=0)
+LANG= diary
 
- # disable environment variable, default to value from config file
- $ unset LANG
+# disable environment variable, default to value from config file
+unset LANG
 
- # start with 'weekday' default from config file, if available
- $ diary
+# start with 'weekday' default from config file, if available
+diary
 
- # remove config file
- $ rm ${XDG_CONFIG_HOME:-~/.config}/diary/diary.cfg
+# remove config file
+rm ${XDG_CONFIG_HOME:-~/.config}/diary/diary.cfg
 
- # start with 'weekday' default value from source code (1=Mon)
- $ diary
+# start with 'weekday' default value from source code (1=Mon)
+diary
 .fi
 
 .SH DEVELOPMENT
 All source code is available in this github repository:
-<https://github.com/in0rdr/diary/>. Contributions are always welcome!
+<https://github.com/in0rdr/diary>. Contributions are always welcome!

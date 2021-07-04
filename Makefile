@@ -1,25 +1,29 @@
 TARGET = diary
-SRC = diary.c
+SRCDIR = src/
+_SRC = utils.c caldav.c diary.c
+SRC = $(addprefix $(SRCDIR), $(_SRC))
 PREFIX ?= /usr/local
 BINDIR ?= $(DESTDIR)$(PREFIX)/bin
 
 MANDIR := $(DESTDIR)$(PREFIX)/share/man
-MAN1 = diary.1
+MAN1 = man/diary.1
 
 CC = gcc
-CFLAGS = -Wall
+CFLAGS = -Wall \
+         -DGOOGLE_OAUTH_CLIENT_ID=\"$(GOOGLE_OAUTH_CLIENT_ID)\" \
+         -DGOOGLE_OAUTH_CLIENT_SECRET=\"$(GOOGLE_OAUTH_CLIENT_SECRET)\"
 UNAME = ${shell uname}
 
 ifeq ($(UNAME),FreeBSD)
-	LIBS = -lncurses
+	LIBS = -lncurses -lcurl -lpthread
 endif
 
 ifeq ($(UNAME),Linux)
-	LIBS = -lncursesw
+	LIBS = -lncursesw -lcurl -lpthread
 endif
 
 ifeq ($(UNAME),Darwin)
-	LIBS = -lncurses -framework CoreFoundation
+	LIBS = -lncurses -lcurl -lpthread -framework CoreFoundation
 endif
 
 
