@@ -204,7 +204,6 @@ struct tm find_closest_entry(const struct tm current,
     time_t it_time = mktime(&it);
 
     for( ; it_time >= start_time && it_time <= end_time; it_time = mktime(&it)) {
-
         if (date_has_entry(diary_dir, diary_dir_size, &it)) {
             return it;
         }
@@ -500,6 +499,9 @@ int main(int argc, char** argv) {
         char pth[100];
         char* ppth = pth;
         char dstr[16];
+        time_t end_time = mktime(&cal_end);
+        struct tm it = cal_start;
+        time_t it_time = mktime(&it);
         edit_cmd(CONFIG.dir, diary_dir_size, &new_date, &pecmd, sizeof ecmd);
 
         switch(ch) {
@@ -640,23 +642,30 @@ int main(int argc, char** argv) {
                 new_date = find_closest_entry(new_date, false, CONFIG.dir, diary_dir_size);
                 mv_valid = go_to(cal, aside, mktime(&new_date), &pad_pos);
                 break;
-            // Sync entry with CalDAV server
+            // Sync entry with CalDAV server.
+            // Show confirmation dialogue before overwriting local files
             case 's':
-                caldav_sync(&curs_date, header, cal, pad_pos, CONFIG.dir, diary_dir_size);
+                caldav_sync(&curs_date, header, cal, pad_pos, CONFIG.dir, diary_dir_size, true);
                 break;
-            // Sync all with CalDAV server
-//            case 'S':
-//                time_t end_time = mktime(&cal_end);
-//                time_t start_time = mktime(&cal_start);
-//                struct tm it = curs_date;
-//                time_t it_time = mktime(&it);
-//                for( ; it_time >= start_time && it_time <= end_time; it_time = mktime(&it)) {
-//                    it.tm_mday++;
-//                    if (date_has_entry(diary_dir, diary_dir_size, &it)) {
-//                        caldav_sync(&it, header, cal, pad_pos);
-//                    }
-//                }
-//                break;
+            // Sync all entries with CalDAV server;
+            case 'S':
+                for( ; it_time <= end_time; it_time = mktime(&it)) {
+                    if (conf_ch == -1) {
+                        // sync error
+                        break;
+                    } else if (conf_ch == 'c') {
+                        // cancel all
+                        break;
+                    } else if (conf_ch == 'a') {
+                        // yes to (a)ll
+                        conf_ch = caldav_sync(&it, header, cal, pad_pos, CONFIG.dir, diary_dir_size, false);
+                    } else {
+                        // show confirmation dialogue before overwriting local files
+                        conf_ch = caldav_sync(&it, header, cal, pad_pos, CONFIG.dir, diary_dir_size, true);
+                    }
+                    it.tm_mday++;
+                }
+                break;
         }
 
         if (mv_valid) {

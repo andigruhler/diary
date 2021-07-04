@@ -92,7 +92,7 @@ char* read_tokenfile() {
     }
 
     fseek(token_file, 0, SEEK_END);
-    token_bytes = ftell(token_file);
+    token_bytes = ftell(token_file) + 1;
     rewind(token_file);
 
     token_buf = malloc(token_bytes);
@@ -408,7 +408,7 @@ char* caldav_req(struct tm* date, char* url, char* http_method, char* postfields
     if (curl) {
         // fail if not authenticated, !CURLE_OK
         curl_easy_setopt(curl, CURLOPT_FAILONERROR, 1L);
-        //curl_easy_setopt(curl, CURLOPT_VERBOSE, 1);
+        // curl_easy_setopt(curl, CURLOPT_VERBOSE, 1);
         curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, http_method);
         curl_easy_setopt(curl, CURLOPT_URL, url);
         curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, write_data);
@@ -530,7 +530,7 @@ void put_event(struct tm* date, const char* dir, size_t dir_size, char* calendar
     rewind(fp);
 
     size_t descr_labell = strlen("DESCRIPTION:");
-    size_t descrl = descr_bytes + descr_labell;
+    size_t descrl = descr_bytes + descr_labell + 1;
     descr = malloc(descrl);
     if (descr == NULL) {
         perror("malloc failed");
@@ -578,8 +578,8 @@ void put_event(struct tm* date, const char* dir, size_t dir_size, char* calendar
     char* response = caldav_req(date, calendar_uri, "PUT", postfields, 0);
     fprintf(stderr, "PUT event response:\n%s\n", response);
     fclose(fp);
-    free(descr);
     free(folded_descr);
+    free(descr);
 
     if (response == NULL) {
         fprintf(stderr, "PUT event failed.\n");
@@ -605,7 +605,19 @@ void* show_progress(void* vargp){
     }
 }
 
-void caldav_sync(struct tm* date, WINDOW* header, WINDOW* cal, int pad_pos, const char* dir, size_t dir_size) {
+/*
+* Sync with CalDAV server.
+* Returns the answer char of the confirmation dialogue
+* Returns 0 if neither local nor remote file exists.
+* Otherwise, returns -1 on error.
+*/
+int caldav_sync(struct tm* date,
+                 WINDOW* header,
+                 WINDOW* cal,
+                 int pad_pos,
+                 const char* dir,
+                 size_t dir_size,
+                 bool confirm) {
     pthread_t progress_tid;
     pthread_create(&progress_tid, NULL, show_progress, (void*)header);
 
@@ -623,7 +635,7 @@ void caldav_sync(struct tm* date, WINDOW* header, WINDOW* cal, int pad_pos, cons
         char* code = get_oauth_code(challenge, header);
         if (code == NULL) {
             fprintf(stderr, "Error retrieving access code.\n");
-            return;
+            return -1;
         }
 
         // get acess token using code and verifier
@@ -671,7 +683,7 @@ void caldav_sync(struct tm* date, WINDOW* header, WINDOW* cal, int pad_pos, cons
         refresh_token = NULL;
         pthread_cancel(progress_tid);
         wclear(header);
-        return;
+        return -1;
     }
 
     user_principal = parse_caldav_current_user_principal(user_principal);
@@ -768,7 +780,7 @@ void caldav_sync(struct tm* date, WINDOW* header, WINDOW* cal, int pad_pos, cons
         fprintf(stderr, "Neither local nor remote file exists, giving up.\n");
         pthread_cancel(progress_tid);
         wclear(header);
-        return;
+        return 0;
     }
 
     double timediff = difftime(localfile_date, remote_date);
@@ -805,24 +817,24 @@ void caldav_sync(struct tm* date, WINDOW* header, WINDOW* cal, int pad_pos, cons
             fprintf(stderr, "Could not fetch description of remote event.\n");
             pthread_cancel(progress_tid);
             wclear(header);
-            return;
+            return -1;
         }
 
-        // prepare header for confirmation dialogue
-        //wclear(header);
-        curs_set(2);
-        noecho();
-
-        pthread_cancel(progress_tid);
-        wclear(header);
+        if (confirm) {
+            // prepare header for confirmation dialogue
+            curs_set(2);
+            noecho();
+            pthread_cancel(progress_tid);
+            wclear(header);
+        }
 
         // ask for confirmation
         strftime(dstr, sizeof dstr, CONFIG.fmt, date);
-        mvwprintw(header, 0, 0, "Remote event is more recent. Sync entry '%s' and overwrite local file? [Y/n] ", dstr);
+        mvwprintw(header, 0, 0, "Remote event is more recent. Sync entry '%s' and overwrite local file? [(Y)es/(a)all/(n)o/(c)ancel] ", dstr);
         bool conf = false;
         while (!conf) {
             conf_ch = wgetch(header);
-            if (conf_ch == 'y' || conf_ch == 'Y' || conf_ch == '\n') {
+            if (conf_ch == 'y' || conf_ch == 'Y' || 'a' || conf_ch == '\n' || !confirm) {
                 fprintf(stderr, "Remote file is newer, extracting description from remote...\n");
 
                 // persist downloaded buffer to local file
@@ -861,4 +873,5 @@ void caldav_sync(struct tm* date, WINDOW* header, WINDOW* cal, int pad_pos, cons
         curs_set(0);
         free(rmt_desc);
     }
+    return conf_ch;
 }
