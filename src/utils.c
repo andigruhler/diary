@@ -323,6 +323,8 @@ void fpath(const char* dir, size_t dir_size, const struct tm* date, char** rpath
 char* unescape_ical_description(const char* description);
 char* escape_ical_description(const char* description);
 
+config CONFIG;
+
 config CONFIG = {
     .range = 1,
     .weekday = 1,

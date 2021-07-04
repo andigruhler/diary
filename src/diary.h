@@ -1,7 +1,6 @@
 #ifndef DIARY_H
 #define DIARY_H
 
-
 #ifdef __MACH__
 	#include <CoreFoundation/CoreFoundation.h>
 #endif

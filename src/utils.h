@@ -53,6 +53,6 @@ typedef struct
     char* google_calendar;
 } config;
 
-config CONFIG;
+extern config CONFIG;
 
 #endif
