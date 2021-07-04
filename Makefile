@@ -15,15 +15,15 @@ CFLAGS = -Wall \
 UNAME = ${shell uname}
 
 ifeq ($(UNAME),FreeBSD)
-	LIBS = -lncurses -lcurl -lpthread
+	LIBS = -lncurses -lcurl -pthread
 endif
 
 ifeq ($(UNAME),Linux)
-	LIBS = -lncursesw -lcurl -lpthread
+	LIBS = -lncursesw -lcurl -pthread
 endif
 
 ifeq ($(UNAME),Darwin)
-	LIBS = -lncurses -lcurl -lpthread -framework CoreFoundation
+	LIBS = -lncurses -lcurl -pthread -framework CoreFoundation
 endif
 
 
