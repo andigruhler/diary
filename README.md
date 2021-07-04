@@ -1,5 +1,5 @@
 <p align="center">
-<img src="./img/diary-worm.png" width="250px" />
+<img alt="Diary Worm Mascot" src="./img/diary-worm.png" width="250px" />
 </p>
 
 # Diary
