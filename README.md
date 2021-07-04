@@ -170,8 +170,6 @@ This key is empty by default and the only configuration key required for setting
 
 The Google Calendar CalDAV API is protected with OAuth2.
 
-The [packaged binaries](#Install) ship with predefined app credentials (clientid/secretid) and consent screen.
-
 The credentials and the consent screen can be redefined at [compile time](#Build) or with the following keys in the [configuration file](#Configuration-File):
 
 ```
