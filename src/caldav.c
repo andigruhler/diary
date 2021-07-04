@@ -831,6 +831,7 @@ int caldav_sync(struct tm* date,
         // ask for confirmation
         strftime(dstr, sizeof dstr, CONFIG.fmt, date);
         mvwprintw(header, 0, 0, "Remote event is more recent. Sync entry '%s' and overwrite local file? [(Y)es/(a)all/(n)o/(c)ancel] ", dstr);
+        char* i;
         bool conf = false;
         while (!conf) {
             conf_ch = wgetch(header);
@@ -842,7 +843,7 @@ int caldav_sync(struct tm* date,
                 if (cursordate_file == NULL) {
                     perror("Failed to open cursor date file");
                 } else {
-                    for (char* i = rmt_desc; *i != '\0'; i++) {
+                    for (i = rmt_desc; *i != '\0'; i++) {
                         if (rmt_desc[i-rmt_desc] == 0x5C) { // backslash
                             switch (*(i+1)) {
                                 case 'n':
