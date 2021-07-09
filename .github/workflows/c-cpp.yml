@@ -9,12 +9,17 @@ on:
 jobs:
   build:
 
-    runs-on: macos-latest
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [macos-latest, ubuntu-18.04, ubuntu-20.04]
 
     steps:
+    - name: Check out repository
+      uses: actions/checkout@v2
     - name: make
       run: make
-    - name: make check
-      run: make check
+    - name: make install
+      run: make install
     - name: check diary version
-      run: ./diary -v
+      run: diary -v
