@@ -14,10 +14,9 @@ jobs:
         os: [ubuntu-18.04, ubuntu-20.04]
     steps:
     - name: Install Ubuntu dependencies
-      run: sudo apt-get install libcurl4
+      run: sudo apt-get install libcurl4 libcurl4-gnutls-dev
 
   build:
-    needs: setup
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
