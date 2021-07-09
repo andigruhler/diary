@@ -7,15 +7,15 @@ on:
     branches: [ master ]
 
 jobs:
-  setup:
+  macos:
     runs-on: macos-latest
     steps:
     - name: Check out repository
       uses: actions/checkout@v2
     - name: make install
-      uses: c/make-install@v2
+      uses: c/make-install
 
-  build:
+  linux:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
@@ -26,4 +26,4 @@ jobs:
     - name: Check out repository
       uses: actions/checkout@v2
     - name: make install
-      uses: c/make-install@v2
+      uses: c/make-install
