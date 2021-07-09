@@ -69,7 +69,7 @@ Server = https://downloadcontent.opensuse.org/repositories/home:/in0rdr/Arch/$ar
 ```
 
 ## Build
-[![Build Status](https://travis-ci.com/in0rdr/diary.svg?branch=master)](https://travis-ci.com/in0rdr/diary)
+[![Build Status](https://github.com/in0rdr/diary/actions/workflows/c.yml/badge.svg)](https://github.com/in0rdr/diary/actions/workflows/c.yml)
 
 1. Define [OAuth2 application credentials](https://developers.google.com/identity/protocols/oauth2) if CalDAV sync should be effective:
     ```
