@@ -26,7 +26,7 @@ jobs:
         os: [ubuntu-18.04, ubuntu-20.04]
     steps:
     - name: Install build requirements
-      run: sudo apt-get install libncurses-dev libcurl4-gnutls-dev
+      run: sudo apt-get install libncurses5-dev libncursesw5-dev libcurl4-gnutls-dev
     - name: Check out repository
       uses: actions/checkout@v2
     - name: make
