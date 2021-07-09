@@ -1,0 +1,9 @@
+runs:
+  using: composite
+  steps:
+  - name: make
+    run: make
+  - name: make install
+    run: make install
+  - name: check diary version
+    run: diary -v

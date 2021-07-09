@@ -1,4 +1,4 @@
-name: C/C++ CI
+name: C CI
 
 on:
   push:
@@ -12,12 +12,8 @@ jobs:
     steps:
     - name: Check out repository
       uses: actions/checkout@v2
-    - name: make
-      run: make
     - name: make install
-      run: make install
-    - name: check diary version
-      run: diary -v
+      uses: c/make-install@v2
 
   build:
     runs-on: ${{ matrix.os }}
@@ -29,9 +25,5 @@ jobs:
       run: sudo apt-get install libncurses5-dev libncursesw5-dev libcurl4-gnutls-dev
     - name: Check out repository
       uses: actions/checkout@v2
-    - name: make
-      run: make
     - name: make install
-      run: sudo make install
-    - name: check diary version
-      run: diary -v
+      uses: c/make-install@v2
