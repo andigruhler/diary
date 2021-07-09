@@ -26,4 +26,4 @@ jobs:
     - name: Check out repository
       uses: actions/checkout@v2
     - name: make install
-      uses: ./.github/c/make-instal
+      uses: ./.github/c/make-install
