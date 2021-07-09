@@ -13,7 +13,7 @@ jobs:
     - name: Check out repository
       uses: actions/checkout@v2
     - name: make install
-      uses: in0rdr/diary/c/make-install@master
+      uses: ./.github/c/make-install@master
 
   linux:
     runs-on: ${{ matrix.os }}
@@ -26,4 +26,4 @@ jobs:
     - name: Check out repository
       uses: actions/checkout@v2
     - name: make install
-      uses: in0rdr/diary/c/make-install@master
+      uses: ./.github/c/make-install@master
