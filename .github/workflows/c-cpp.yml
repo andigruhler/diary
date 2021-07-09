@@ -7,13 +7,21 @@ on:
     branches: [ master ]
 
 jobs:
-  build:
+  setup:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-18.04, ubuntu-20.04]
+    steps:
+    - name: Install Ubuntu dependencies
+      run: apt-get install libcurl4
 
+  build:
+    needs: setup
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
         os: [macos-latest, ubuntu-18.04, ubuntu-20.04]
-
     steps:
     - name: Check out repository
       uses: actions/checkout@v2
