@@ -3,7 +3,10 @@ runs:
   steps:
   - name: make
     run: make
+    shell: bash
   - name: make install
     run: make install
+    shell: bash
   - name: check diary version
     run: diary -v
+    shell: bash
