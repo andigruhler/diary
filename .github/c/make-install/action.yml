@@ -5,7 +5,7 @@ runs:
     run: make
     shell: bash
   - name: make install
-    run: make install
+    run: sudo make install
     shell: bash
   - name: check diary version
     run: diary -v
