@@ -18,7 +18,8 @@ void random_code_challenge(size_t len, char* dest) {
     char alphabet[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~";
     size_t alphabet_size = strlen(alphabet);
 
-    for (int i = 0; i < len; i++) {
+    int i = 0;
+    for (i = 0; i < len; i++) {
         dest[i] = alphabet[rand() % alphabet_size];
     }
     dest[len-1] = '\0';
