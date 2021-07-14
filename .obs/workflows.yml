@@ -3,3 +3,8 @@ workflow:
     - branch_package:
         source_project: home:in0rdr
         source_package: diary-nightly
+  filters:
+    event: push
+    branches:
+      only:
+        - master
